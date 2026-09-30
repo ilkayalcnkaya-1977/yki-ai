@@ -1,4 +1,5 @@
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import { nitro } from "nitro/vite";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import {
@@ -97,7 +98,8 @@ export default defineConfig(({ command, mode }) => {
       // SSR-safe: never touch browser-only globals (window, document,
       // localStorage, navigator) during render or at module top level — only
       // inside effects/handlers, or guarded with `typeof window !== "undefined"`.
-      tanstackStart({
+      nitro(),
+    tanstackStart({
         server: { entry: "server" },
       }),
       higgsfieldDesignInspectorVitePlugin(designInspectorEnabled),
