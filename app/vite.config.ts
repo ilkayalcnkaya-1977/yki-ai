@@ -100,9 +100,13 @@ export default defineConfig(({ command, mode }) => {
       // localStorage, navigator) during render or at module top level — only
       // inside effects/handlers, or guarded with `typeof window !== "undefined"`.
       nitro(command === "build" && isVercel ? { preset: "vercel" } : {}),
-    tanstackStart({
+    tanstackStart(
+  isVercel
+    ? {}
+    : {
         server: { entry: "server" },
-      }),
+      },
+  ),
       higgsfieldDesignInspectorVitePlugin(designInspectorEnabled),
       react({
         babel: {
