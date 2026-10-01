@@ -11,6 +11,8 @@ import {
   Zap,
 } from "lucide-react";
 import { useState } from "react";
+import { createVideoGeneration } from "../lib/video-generation.server";
+import { getAccessToken } from "../lib/supabase-client";
 
 export const Route = createFileRoute("/studio")({
   component: Studio,
@@ -22,20 +24,53 @@ function Studio() {
   const [prompt, setPrompt] = useState(
     "A street racer drives through a neon Istanbul at midnight. The city suddenly transforms into a futuristic metropolis while the camera races alongside the car."
   );
+
   const [creating, setCreating] = useState(false);
+  const [generationId, setGenerationId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const credits = 32;
 
   const handleCreate = async () => {
-    if (!prompt.trim()) return;
+    setError(null);
+
+    const cleanPrompt = prompt.trim();
+
+    if (!cleanPrompt) {
+      setError("Please write an idea first.");
+      return;
+    }
+
+    const accessToken = getAccessToken();
+
+    if (!accessToken) {
+      setError("Please sign in before creating a video.");
+      return;
+    }
 
     setCreating(true);
 
     try {
-      // Gerçek video üretim API'sini bir sonraki adımda bağlıyoruz.
-      console.log({
-        prompt,
-        format,
-        duration,
+      const result = await createVideoGeneration({
+        data: {
+          accessToken,
+          prompt: cleanPrompt,
+          format,
+          duration,
+          style: "cinematic",
+          generateAudio: true,
+        },
       });
+
+      setGenerationId(result.generationId);
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Video generation could not be started."
+      );
     } finally {
       setCreating(false);
     }
@@ -65,17 +100,17 @@ function Studio() {
 
           <div className="side-title">NEW PROJECT</div>
 
-          <button className="side-item active">
+          <button className="side-item active" type="button">
             <Sparkles size={16} />
             Text to Video
           </button>
 
-          <button className="side-item">
+          <button className="side-item" type="button">
             <ImagePlus size={16} />
             Image to Video
           </button>
 
-          <button className="side-item">
+          <button className="side-item" type="button">
             <Layers3 size={16} />
             Remix
           </button>
@@ -112,7 +147,7 @@ function Studio() {
             </div>
 
             <div className="studio-status">
-              SYSTEM READY <i />
+              {creating ? "CREATING" : "SYSTEM READY"} <i />
             </div>
           </div>
 
@@ -124,10 +159,11 @@ function Studio() {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Describe the video you want to create..."
+                disabled={creating}
               />
 
               <div className="prompt-tools">
-                <button type="button">
+                <button type="button" disabled={creating}>
                   <Wand2 size={14} />
                   Enhance prompt
                 </button>
@@ -146,6 +182,7 @@ function Studio() {
                         type="button"
                         className={format === item ? "selected" : ""}
                         onClick={() => setFormat(item)}
+                        disabled={creating}
                       >
                         {item}
                       </button>
@@ -157,16 +194,22 @@ function Studio() {
                   <label>DURATION</label>
 
                   <div className="seg">
-                    {["8s", "10s", "15s"].map((item) => (
-                      <button
-                        key={item}
-                        type="button"
-                        className={duration === item ? "selected" : ""}
-                        onClick={() => setDuration(item)}
-                      >
-                        {item}
-                      </button>
-                    ))}
+                    <button
+                      type="button"
+                      className="selected"
+                      onClick={() => setDuration("8s")}
+                      disabled={creating}
+                    >
+                      8s
+                    </button>
+
+                    <button type="button" disabled title="Coming soon">
+                      10s
+                    </button>
+
+                    <button type="button" disabled title="Coming soon">
+                      15s
+                    </button>
                   </div>
                 </div>
               </div>
@@ -175,7 +218,7 @@ function Studio() {
                 <div>
                   <label>STYLE</label>
 
-                  <select defaultValue="cinematic">
+                  <select defaultValue="cinematic" disabled={creating}>
                     <option value="cinematic">Cinematic</option>
                     <option value="realistic">Realistic</option>
                     <option value="anime">Anime</option>
@@ -186,7 +229,7 @@ function Studio() {
                 <div>
                   <label>MODEL</label>
 
-                  <select defaultValue="fast">
+                  <select defaultValue="fast" disabled={creating}>
                     <option value="fast">Fast Render</option>
                     <option value="quality">Quality Render</option>
                   </select>
@@ -195,8 +238,23 @@ function Studio() {
 
               <div className="cost-line">
                 <span>Estimated cost</span>
-                <strong>32 credits</strong>
+                <strong>{credits} credits</strong>
               </div>
+
+              {error && (
+                <div
+                  style={{
+                    marginBottom: 12,
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    background: "rgba(255, 70, 70, 0.08)",
+                    color: "#ff6b6b",
+                    fontSize: 13,
+                  }}
+                >
+                  {error}
+                </div>
+              )}
 
               <button
                 className="create-btn"
@@ -225,14 +283,18 @@ function Studio() {
 
                 <strong>
                   {creating
-                    ? "Preparing your video..."
-                    : "Your video will appear here"}
+                    ? "Starting your video..."
+                    : generationId
+                      ? "Video generation started"
+                      : "Your video will appear here"}
                 </strong>
 
                 <span>
                   {creating
-                    ? "YKI AI is preparing the generation."
-                    : "Write an idea and start creating."}
+                    ? "YKI AI is sending your idea to the video engine."
+                    : generationId
+                      ? `Generation ID: ${generationId}`
+                      : "Write an idea and start creating."}
                 </span>
               </div>
 
