@@ -1,0 +1,283 @@
+import { createServerFn } from "@tanstack/react-start";
+import { supabaseUserFetch, supabaseAdminFetch } from "./supabase-rest.server";
+
+const REPLICATE_API_URL = "https://api.replicate.com/v1/models/google/veo-3.1-fast/predictions";
+
+const MODEL = "google/veo-3.1-fast";
+
+// YKI AI iç fiyatlandırma birimi.
+// İlk MVP için 4 kredi / saniye.
+const CREDITS_PER_SECOND = 4;
+
+function requireReplicateToken() {
+  const token = process.env.REPLICATE_API_TOKEN;
+
+  if (!token) {
+    throw new Error("REPLICATE_API_TOKEN is not configured");
+  }
+
+  return token;
+}
+
+function requireWebhookUrl() {
+  const url = process.env.REPLICATE_WEBHOOK_URL;
+
+  if (!url) {
+    throw new Error("REPLICATE_WEBHOOK_URL is not configured");
+  }
+
+  return url;
+}
+
+function getDurationSeconds(value: string) {
+  // İlk gerçek üretimde güvenli olarak 8 saniyeyi kullanıyoruz.
+  // Provider tarafındaki diğer süreleri daha sonra ayrıca açacağız.
+  if (value === "8s") return 8;
+
+  throw new Error("Only 8 second generation is currently enabled");
+}
+
+function getResolution(format: string) {
+  if (format === "9:16" || format === "16:9" || format === "1:1") {
+    return "1080p";
+  }
+
+  return "1080p";
+}
+
+export const createVideoGeneration = createServerFn({
+  method: "POST",
+})
+  .inputValidator(
+    (data: {
+      accessToken: string;
+      prompt: string;
+      format: string;
+      duration: string;
+      style?: string;
+      generateAudio?: boolean;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    const prompt = data.prompt.trim();
+
+    if (!prompt) {
+      throw new Error("Prompt is required");
+    }
+
+    if (prompt.length > 4000) {
+      throw new Error("Prompt is too long");
+    }
+
+    const durationSeconds = getDurationSeconds(data.duration);
+    const resolution = getResolution(data.format);
+    const generateAudio = data.generateAudio ?? true;
+
+    const credits = durationSeconds * CREDITS_PER_SECOND;
+
+    /*
+     * 1. Kullanıcının Supabase hesabından workspace'i bul.
+     */
+    const workspaceResponse = await supabaseUserFetch(
+      `/rest/v1/workspaces?select=id&limit=1`,
+      data.accessToken,
+    );
+
+    if (!workspaceResponse.ok) {
+      const errorText = await workspaceResponse.text();
+      throw new Error(`Unable to load workspace: ${errorText}`);
+    }
+
+    const workspaces = (await workspaceResponse.json()) as Array<{
+      id: string;
+    }>;
+
+    const workspace = workspaces[0];
+
+    if (!workspace) {
+      throw new Error("No workspace found for this account");
+    }
+
+    /*
+     * 2. Yeni proje oluştur.
+     */
+    const projectResponse = await supabaseUserFetch(
+      "/rest/v1/rpc/create_project",
+      data.accessToken,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          p_workspace_id: workspace.id,
+          p_title: prompt.slice(0, 80),
+          p_aspect_ratio: data.format,
+          p_duration_seconds: durationSeconds,
+        }),
+      },
+    );
+
+    if (!projectResponse.ok) {
+      const errorText = await projectResponse.text();
+      throw new Error(`Unable to create project: ${errorText}`);
+    }
+
+    const projectId = (await projectResponse.json()) as string;
+
+    /*
+     * 3. Kredi rezervasyonu.
+     */
+    const idempotencyKey = crypto.randomUUID();
+
+    const reserveResponse = await supabaseUserFetch(
+      "/rest/v1/rpc/reserve_generation",
+      data.accessToken,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          p_workspace_id: workspace.id,
+          p_project_id: projectId,
+          p_prompt: prompt,
+          p_credits: credits,
+          p_model: MODEL,
+          p_aspect_ratio: data.format,
+          p_duration_seconds: durationSeconds,
+          p_idempotency_key: idempotencyKey,
+        }),
+      },
+    );
+
+    if (!reserveResponse.ok) {
+      const errorText = await reserveResponse.text();
+      throw new Error(`Credit reservation failed: ${errorText}`);
+    }
+
+    const reservation = (await reserveResponse.json()) as Array<{
+      generation_id: string;
+      status: string;
+      duplicate: boolean;
+    }>;
+
+    const generation = reservation[0];
+
+    if (!generation?.generation_id) {
+      throw new Error("Generation reservation returned no generation ID");
+    }
+
+    /*
+     * Aynı istek daha önce işlendi ise yeni provider işi oluşturma.
+     */
+    if (generation.duplicate) {
+      return {
+        generationId: generation.generation_id,
+        status: generation.status,
+        duplicate: true,
+      };
+    }
+
+    /*
+     * 4. Generation'a ek teknik bilgileri server-side yaz.
+     */
+    const updateGenerationResponse = await supabaseAdminFetch(
+      `/rest/v1/generations?id=eq.${generation.generation_id}`,
+      {
+        method: "PATCH",
+        headers: {
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({
+          resolution,
+          generate_audio: generateAudio,
+          model_version: MODEL,
+        }),
+      },
+    );
+
+    if (!updateGenerationResponse.ok) {
+      await supabaseUserFetch(
+        "/rest/v1/rpc/refund_generation",
+        data.accessToken,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            p_generation_id: generation.generation_id,
+          }),
+        },
+      );
+
+      const errorText = await updateGenerationResponse.text();
+      throw new Error(`Generation setup failed: ${errorText}`);
+    }
+
+    /*
+     * 5. Replicate prediction oluştur.
+     */
+    const replicateResponse = await fetch(REPLICATE_API_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${requireReplicateToken()}`,
+        "Content-Type": "application/json",
+        Prefer: "respond-async",
+      },
+      body: JSON.stringify({
+        input: {
+          prompt,
+          aspect_ratio: data.format,
+          duration: durationSeconds,
+          resolution,
+          generate_audio: generateAudio,
+        },
+        webhook: requireWebhookUrl(),
+        webhook_events_filter: ["completed"],
+      }),
+    });
+
+    if (!replicateResponse.ok) {
+      const errorText = await replicateResponse.text();
+
+      await supabaseUserFetch(
+        "/rest/v1/rpc/refund_generation",
+        data.accessToken,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            p_generation_id: generation.generation_id,
+          }),
+        },
+      );
+
+      throw new Error(`Video provider error: ${errorText}`);
+    }
+
+    const prediction = (await replicateResponse.json()) as {
+      id: string;
+      status: string;
+    };
+
+    /*
+     * 6. Provider job ID'sini generation'a kaydet.
+     */
+    const submittedResponse = await supabaseAdminFetch(
+      `/rest/v1/rpc/system_mark_generation_submitted`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          p_generation_id: generation.generation_id,
+          p_provider_job_id: prediction.id,
+          p_model_version: MODEL,
+        }),
+      },
+    );
+
+    if (!submittedResponse.ok) {
+      throw new Error(
+        "Provider job was created but generation could not be marked as submitted",
+      );
+    }
+
+    return {
+      generationId: generation.generation_id,
+      providerJobId: prediction.id,
+      status: prediction.status,
+      credits,
+      duplicate: false,
+    };
+  });
