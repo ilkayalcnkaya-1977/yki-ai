@@ -2,7 +2,19 @@ const SUPABASE_URL =
   process.env.SUPABASE_URL ??
   "https://dtdygokcjjoprqfjmmcz.supabase.co";
 
-const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY;
+const SUPABASE_PUBLISHABLE_KEY =
+  process.env.SUPABASE_PUBLISHABLE_KEY;
+
+const SUPABASE_SECRET_KEY =
+  process.env.SUPABASE_SECRET_KEY;
+
+function requirePublishableKey() {
+  if (!SUPABASE_PUBLISHABLE_KEY) {
+    throw new Error("SUPABASE_PUBLISHABLE_KEY is not configured");
+  }
+
+  return SUPABASE_PUBLISHABLE_KEY;
+}
 
 function requireSecretKey() {
   if (!SUPABASE_SECRET_KEY) {
@@ -29,7 +41,7 @@ export async function supabaseUserFetch(
 ) {
   const headers = new Headers(init.headers);
 
-  headers.set("apikey", requireSecretKey());
+  headers.set("apikey", requirePublishableKey());
   headers.set("Authorization", `Bearer ${token}`);
 
   if (init.body && !headers.has("Content-Type")) {
