@@ -1,3 +1,6 @@
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_q7sfkEmZcHvt4xTa4DkRPg_GtBkq5DI";
+
 function getSupabaseConfig() {
   const url =
     process.env.SUPABASE_URL ??
@@ -6,7 +9,8 @@ function getSupabaseConfig() {
 
   const publishableKey =
     process.env.SUPABASE_PUBLISHABLE_KEY ??
-    process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+    DEFAULT_SUPABASE_PUBLISHABLE_KEY;
 
   const secretKey = process.env.SUPABASE_SECRET_KEY;
 
