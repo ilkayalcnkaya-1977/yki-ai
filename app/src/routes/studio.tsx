@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { createVideoGeneration } from "../lib/video-generation.functions";
-import { getAccessToken } from "../lib/supabase-client";
+import { getAccessToken, refreshSession } from "../lib/supabase-client";
 
 export const Route = createFileRoute("/studio")({
   component: Studio,
@@ -41,7 +41,7 @@ function Studio() {
       return;
     }
 
-    const accessToken = getAccessToken();
+    let accessToken = getAccessToken();
 
     if (!accessToken) {
       setError("Please sign in before creating a video.");
@@ -49,6 +49,13 @@ function Studio() {
     }
 
     setCreating(true);
+
+    // Refresh the session before generation so Supabase never receives
+    // a stale JWT that can trigger PGRST303 ("JWT issued at future").
+    const refreshedSession = await refreshSession();
+    if (refreshedSession?.access_token) {
+      accessToken = refreshedSession.access_token;
+    }
 
     try {
       const result = await createVideoGeneration({
