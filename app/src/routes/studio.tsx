@@ -10,8 +10,8 @@ import {
   Wand2,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
-import { createVideoGeneration } from "../lib/video-generation.server";
+import { useEffect, useState } from "react";
+import { createVideoGeneration, enhancePrompt, getGeneration, getStudioState } from "../lib/video-generation.server";
 import { getAccessToken } from "../lib/supabase-client";
 
 export const Route = createFileRoute("/studio")({
@@ -19,17 +19,24 @@ export const Route = createFileRoute("/studio")({
 });
 
 function Studio() {
-  const [format, setFormat] = useState("9:16");
-  const [duration, setDuration] = useState("8s");
+  const [format, setFormat] = useState<"9:16" | "16:9" | "1:1">("9:16");
+  const [duration] = useState("8s");
   const [prompt, setPrompt] = useState(
     "A street racer drives through a neon Istanbul at midnight. The city suddenly transforms into a futuristic metropolis while the camera races alongside the car."
   );
 
   const [creating, setCreating] = useState(false);
+  const [style, setStyle] = useState<"cinematic" | "realistic" | "anime" | "3d">("cinematic");
+  const [model] = useState("veo-fast");
+  const [generateAudio, setGenerateAudio] = useState(true);
+  const [credits, setCredits] = useState<number | null>(null);
   const [generationId, setGenerationId] = useState<string | null>(null);
+  const [generation, setGeneration] = useState<{ status: string; output_url: string | null; error_code: string | null; project_id: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const credits = 32;
+  useEffect(() => { const token = getAccessToken(); if (!token) return; getStudioState({ data: { accessToken: token } }).then((state) => setCredits(state.credits)).catch(() => setCredits(null)); }, []);
+  useEffect(() => { if (!generationId) return; const token = getAccessToken(); if (!token) return; const poll = async () => { try { const next = await getGeneration({ data: { accessToken: token, generationId } }); setGeneration(next); if (["queued", "submitted", "processing"].includes(next.status)) window.setTimeout(poll, 5000); } catch { /* status will be retried next visit */ } }; void poll(); }, [generationId]);
+  const estimatedCost = 32;
 
   const handleCreate = async () => {
     setError(null);
@@ -57,12 +64,15 @@ function Studio() {
           prompt: cleanPrompt,
           format,
           duration,
-          style: "cinematic",
-          generateAudio: true,
+          style,
+          generateAudio,
+          idempotencyKey: crypto.randomUUID(),
         },
       });
 
       setGenerationId(result.generationId);
+      setGeneration({ status: result.status, output_url: null, error_code: null, project_id: "" });
+      setCredits((current) => current === null ? current : current - result.credits);
     } catch (err) {
       console.error(err);
 
@@ -87,7 +97,7 @@ function Studio() {
 
         <div className="credit-pill">
           <Zap size={13} />
-          240 credits
+          {credits === null ? "…" : `${credits} credits`}
         </div>
       </header>
 
@@ -105,12 +115,12 @@ function Studio() {
             Text to Video
           </button>
 
-          <button className="side-item" type="button">
+          <button className="side-item" type="button" disabled title="Image-to-video is not supported by the selected provider yet.">
             <ImagePlus size={16} />
             Image to Video
           </button>
 
-          <button className="side-item" type="button">
+          <button className="side-item" type="button" disabled title="Remix is coming soon.">
             <Layers3 size={16} />
             Remix
           </button>
@@ -126,7 +136,7 @@ function Studio() {
               Browse rising formats and create from one click.
             </small>
 
-            <a href="/#trends">
+            <a href="/trends">
               Explore trends <ArrowUpRight size={13} />
             </a>
           </div>
@@ -163,9 +173,8 @@ function Studio() {
               />
 
               <div className="prompt-tools">
-                <button type="button" disabled={creating}>
-                  <Wand2 size={14} />
-                  Enhance prompt
+                <button type="button" disabled={creating} onClick={async () => { const token = getAccessToken(); if (!token) { setError("Please sign in before enhancing a prompt."); return; } setCreating(true); try { const result = await enhancePrompt({ data: { accessToken: token, prompt } }); setPrompt(result.prompt); if (!result.available) setError(result.message); } catch { setError("Prompt enhancement is temporarily unavailable."); } finally { setCreating(false); } }}>
+                  <Wand2 size={14} /> Enhance prompt
                 </button>
 
                 <span>AI will build the shot list automatically</span>
@@ -197,7 +206,6 @@ function Studio() {
                     <button
                       type="button"
                       className="selected"
-                      onClick={() => setDuration("8s")}
                       disabled={creating}
                     >
                       8s
@@ -218,7 +226,7 @@ function Studio() {
                 <div>
                   <label>STYLE</label>
 
-                  <select defaultValue="cinematic" disabled={creating}>
+                  <select value={style} onChange={(e) => setStyle(e.target.value as typeof style)} disabled={creating}>
                     <option value="cinematic">Cinematic</option>
                     <option value="realistic">Realistic</option>
                     <option value="anime">Anime</option>
@@ -229,16 +237,18 @@ function Studio() {
                 <div>
                   <label>MODEL</label>
 
-                  <select defaultValue="fast" disabled={creating}>
-                    <option value="fast">Fast Render</option>
-                    <option value="quality">Quality Render</option>
+                  <select value={model} disabled={creating}>
+                    <option value="veo-fast">Fast Render</option>
+                    <option value="quality" disabled>Quality Render (coming soon)</option>
                   </select>
                 </div>
               </div>
 
+              <label className="cost-line"><span>Generate audio</span><input type="checkbox" checked={generateAudio} onChange={(e) => setGenerateAudio(e.target.checked)} disabled={creating} /></label>
+
               <div className="cost-line">
                 <span>Estimated cost</span>
-                <strong>{credits} credits</strong>
+                <strong>{credits === null ? "Loading…" : `${estimatedCost} credits · ${credits} available`}</strong>
               </div>
 
               {error && (
@@ -260,7 +270,7 @@ function Studio() {
                 className="create-btn"
                 type="button"
                 onClick={handleCreate}
-                disabled={creating || !prompt.trim()}
+                disabled={creating || !prompt.trim() || credits === null || credits < estimatedCost}
               >
                 <Play size={17} fill="currentColor" />
 
@@ -281,21 +291,7 @@ function Studio() {
                   <Sparkles size={24} />
                 </div>
 
-                <strong>
-                  {creating
-                    ? "Starting your video..."
-                    : generationId
-                      ? "Video generation started"
-                      : "Your video will appear here"}
-                </strong>
-
-                <span>
-                  {creating
-                    ? "YKI AI is sending your idea to the video engine."
-                    : generationId
-                      ? `Generation ID: ${generationId}`
-                      : "Write an idea and start creating."}
-                </span>
+                {generation?.status === "completed" && generation.output_url ? <><video controls src={generation.output_url} style={{ maxWidth: "100%", maxHeight: 340 }} /><a className="create-btn" href={generation.output_url} download>Download video</a><a href="/projects">View project</a></> : <><strong>{creating ? "Starting your video..." : generation ? ["failed", "refunded", "canceled"].includes(generation.status) ? "Generation failed — credits refunded" : "Your video is being generated" : "Your video will appear here"}</strong><span>{creating ? "YKI AI is sending your idea to the video engine." : generation?.error_code ? "The provider could not complete this video. Update the idea and try again." : generation ? "We will update this preview when the provider finishes." : "Write an idea and start creating."}</span></>}
               </div>
 
               <div className="preview-bottom">
