@@ -1,27 +1,36 @@
-const SUPABASE_URL =
-  process.env.SUPABASE_URL ??
-  "https://dtdygokcjjoprqfjmmcz.supabase.co";
+function getSupabaseConfig() {
+  const url =
+    process.env.SUPABASE_URL ??
+    process.env.VITE_SUPABASE_URL ??
+    "https://dtdygokcjjoprqfjmmcz.supabase.co";
 
-const SUPABASE_PUBLISHABLE_KEY =
-  process.env.SUPABASE_PUBLISHABLE_KEY;
+  const publishableKey =
+    process.env.SUPABASE_PUBLISHABLE_KEY ??
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-const SUPABASE_SECRET_KEY =
-  process.env.SUPABASE_SECRET_KEY;
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
+
+  return { url: url.replace(/\/$/, ""), publishableKey, secretKey };
+}
 
 function requirePublishableKey() {
-  if (!SUPABASE_PUBLISHABLE_KEY) {
+  const { publishableKey } = getSupabaseConfig();
+
+  if (!publishableKey) {
     throw new Error("SUPABASE_PUBLISHABLE_KEY is not configured");
   }
 
-  return SUPABASE_PUBLISHABLE_KEY;
+  return publishableKey;
 }
 
 function requireSecretKey() {
-  if (!SUPABASE_SECRET_KEY) {
+  const { secretKey } = getSupabaseConfig();
+
+  if (!secretKey) {
     throw new Error("SUPABASE_SECRET_KEY is not configured");
   }
 
-  return SUPABASE_SECRET_KEY;
+  return secretKey;
 }
 
 export function getUserTokenFromRequest(request: Request) {
@@ -39,6 +48,7 @@ export async function supabaseUserFetch(
   token: string,
   init: RequestInit = {},
 ) {
+  const { url } = getSupabaseConfig();
   const headers = new Headers(init.headers);
 
   headers.set("apikey", requirePublishableKey());
@@ -48,7 +58,7 @@ export async function supabaseUserFetch(
     headers.set("Content-Type", "application/json");
   }
 
-  return fetch(`${SUPABASE_URL}${path}`, {
+  return fetch(`${url}${path}`, {
     ...init,
     headers,
   });
@@ -58,6 +68,7 @@ export async function supabaseAdminFetch(
   path: string,
   init: RequestInit = {},
 ) {
+  const { url } = getSupabaseConfig();
   const secretKey = requireSecretKey();
   const headers = new Headers(init.headers);
 
@@ -68,7 +79,7 @@ export async function supabaseAdminFetch(
     headers.set("Content-Type", "application/json");
   }
 
-  return fetch(`${SUPABASE_URL}${path}`, {
+  return fetch(`${url}${path}`, {
     ...init,
     headers,
   });
