@@ -251,20 +251,7 @@ function Studio() {
                 <strong>{credits === null ? "Loading…" : `${estimatedCost} credits · ${credits} available`}</strong>
               </div>
 
-              {error && (
-                <div
-                  style={{
-                    marginBottom: 12,
-                    padding: "10px 12px",
-                    borderRadius: 10,
-                    background: "rgba(255, 70, 70, 0.08)",
-                    color: "#ff6b6b",
-                    fontSize: 13,
-                  }}
-                >
-                  {error}
-                </div>
-              )}
+              {error && <div className="studio-error">{error}</div>}
 
               <button
                 className="create-btn"
