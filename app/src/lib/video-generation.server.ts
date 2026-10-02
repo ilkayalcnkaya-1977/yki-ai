@@ -40,7 +40,7 @@ export const createVideoGeneration = createServerFn({ method: "POST" }).validato
 
 export const getStudioState = createServerFn({ method: "POST" }).validator(z.object({ accessToken: z.string() })).handler(async ({ data }) => {
   await requireSupabaseUser(data.accessToken);
-  const response = await supabaseUserFetch("/rest/v1/credit_accounts?select=balance,workspaces!inner(id)&limit=1", data.accessToken);
+  const response = await supabaseUserFetch("/rest/v1/credit_accounts?select=balance&limit=1", data.accessToken);
   if (!response.ok) throw new Error("Your credits could not be loaded.");
   const accounts = await response.json() as Array<{ balance: number }>;
   return { credits: accounts[0]?.balance ?? 0, estimatedCost: creditsFor(8) };
@@ -76,6 +76,23 @@ export const getGeneration = createServerFn({ method: "POST" }).validator(z.obje
   const latestRows = await latest.json() as Array<{ id: string; status: string; output_url: string | null; error_code: string | null; project_id: string }>;
   if (!latestRows[0]) throw new Error("Generation not found.");
   return latestRows[0];
+});
+
+export const listProjects = createServerFn({ method: "POST" }).validator(z.object({ accessToken: z.string() })).handler(async ({ data }) => {
+  await requireSupabaseUser(data.accessToken);
+  const response = await supabaseUserFetch(
+    "/rest/v1/projects?select=id,title,created_at,aspect_ratio,duration_seconds,generations(id,status,output_url)&order=created_at.desc",
+    data.accessToken,
+  );
+  if (!response.ok) throw new Error("Projects could not be loaded.");
+  return response.json() as Promise<Array<{
+    id: string;
+    title: string;
+    created_at: string;
+    aspect_ratio: string;
+    duration_seconds: number;
+    generations: Array<{ id: string; status: string; output_url: string | null }>;
+  }>>;
 });
 
 export const enhancePrompt = createServerFn({ method: "POST" }).validator(z.object({ accessToken: z.string(), prompt: z.string().trim().min(1).max(4000) })).handler(async ({ data }) => {
