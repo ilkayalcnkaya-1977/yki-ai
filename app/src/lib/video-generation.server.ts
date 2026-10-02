@@ -27,7 +27,7 @@ export const createVideoGeneration = createServerFn({ method: "POST" }).validato
     // veo-3.1-fast supports these documented inputs; do not send UI-only style/model fields.
     const response = await fetch(replicateUrl, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Prefer: "respond-async" }, body: JSON.stringify({ input: { prompt: data.prompt, aspect_ratio: data.format, duration: 8, generate_audio: data.generateAudio } }) });
     if (!response.ok) throw new Error("The video provider could not accept this request.");
-    const prediction = await response.json() as { id?: string; status?: string };
+    const prediction = await response.json() as { id?: string; status?: string; version?: string };
     if (!prediction.id) throw new Error("The video provider returned an invalid response.");
     await rpcAsSystem("system_mark_generation_submitted", { p_generation_id: generation.generation_id, p_provider_job_id: prediction.id, p_model_version: prediction.version ?? model });
     return { generationId: generation.generation_id, status: prediction.status ?? "submitted", credits, duplicate: false };
@@ -48,11 +48,34 @@ export const getStudioState = createServerFn({ method: "POST" }).validator(z.obj
 
 export const getGeneration = createServerFn({ method: "POST" }).validator(z.object({ accessToken: z.string(), generationId: z.string().uuid() })).handler(async ({ data }) => {
   await requireSupabaseUser(data.accessToken);
-  const response = await supabaseUserFetch(`/rest/v1/generations?id=eq.${encodeURIComponent(data.generationId)}&select=id,status,output_url,error_code,project_id`, data.accessToken);
+  const query = `/rest/v1/generations?id=eq.${encodeURIComponent(data.generationId)}&select=id,status,output_url,error_code,project_id,provider_job_id&limit=1`;
+  const response = await supabaseUserFetch(query, data.accessToken);
   if (!response.ok) throw new Error("Generation status could not be loaded.");
-  const rows = await response.json() as Array<{ id: string; status: string; output_url: string | null; error_code: string | null; project_id: string }>;
-  if (!rows[0]) throw new Error("Generation not found.");
-  return rows[0];
+  const rows = await response.json() as Array<{ id: string; status: string; output_url: string | null; error_code: string | null; project_id: string; provider_job_id: string | null }>;
+  const generation = rows[0];
+  if (!generation) throw new Error("Generation not found.");
+
+  if (generation.provider_job_id && ["queued", "starting", "submitted", "processing"].includes(generation.status)) {
+    const token = process.env.REPLICATE_API_TOKEN;
+    if (token) {
+      const providerResponse = await fetch(`https://api.replicate.com/v1/predictions/${encodeURIComponent(generation.provider_job_id)}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (providerResponse.ok) {
+        const prediction = await providerResponse.json() as { id: string; status: string; output?: string | string[] | null; error?: unknown };
+        if (["succeeded", "completed"].includes(prediction.status)) {
+          const outputUrl = Array.isArray(prediction.output) ? prediction.output[0] ?? null : prediction.output ?? null;
+          if (outputUrl) await rpcAsSystem("system_apply_provider_update", { p_provider_job_id: prediction.id, p_status: prediction.status, p_output_url: outputUrl, p_error_code: null, p_metadata: prediction });
+        } else if (["failed", "canceled", "error"].includes(prediction.status)) {
+          await rpcAsSystem("system_apply_provider_update", { p_provider_job_id: prediction.id, p_status: prediction.status, p_output_url: null, p_error_code: typeof prediction.error === "string" ? prediction.error : "PROVIDER_FAILED", p_metadata: prediction });
+        }
+      }
+    }
+  }
+
+  const latest = await supabaseUserFetch(query, data.accessToken);
+  if (!latest.ok) throw new Error("Generation status could not be refreshed.");
+  const latestRows = await latest.json() as Array<{ id: string; status: string; output_url: string | null; error_code: string | null; project_id: string }>;
+  if (!latestRows[0]) throw new Error("Generation not found.");
+  return latestRows[0];
 });
 
 export const enhancePrompt = createServerFn({ method: "POST" }).validator(z.object({ accessToken: z.string(), prompt: z.string().trim().min(1).max(4000) })).handler(async ({ data }) => {
