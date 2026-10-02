@@ -20,7 +20,7 @@ export const Route = createFileRoute("/studio")({
 
 function Studio() {
   const [format, setFormat] = useState<"9:16" | "16:9" | "1:1">("9:16");
-  const [duration] = useState("8s");
+  const duration = "8s" as const;
   const [prompt, setPrompt] = useState(
     "A street racer drives through a neon Istanbul at midnight. The city suddenly transforms into a futuristic metropolis while the camera races alongside the car."
   );
@@ -185,7 +185,7 @@ function Studio() {
               />
 
               <div className="prompt-tools">
-                <button type="button" disabled={creating} onClick={async () => { const token = getAccessToken(); if (!token) { setError("Please sign in before enhancing a prompt."); return; } setCreating(true); try { const result = await enhancePrompt({ data: { accessToken: token, prompt } }); setPrompt(result.prompt); if (!result.available) setError(result.message); } catch { setError("Prompt enhancement is temporarily unavailable."); } finally { setCreating(false); } }}>
+                <button type="button" disabled={creating} onClick={async () => { const token = getAccessToken(); if (!token) { setError("Please sign in before enhancing a prompt."); return; } setCreating(true); try { const result = await enhancePrompt({ data: { accessToken: token, prompt } }); setPrompt(result.prompt); if (!result.available && "message" in result) setError(result.message); } catch { setError("Prompt enhancement is temporarily unavailable."); } finally { setCreating(false); } }}>
                   <Wand2 size={14} /> Enhance prompt
                 </button>
 
