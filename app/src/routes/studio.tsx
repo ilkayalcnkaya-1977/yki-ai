@@ -75,6 +75,7 @@ function Studio() {
           accessToken,
           prompt: cleanPrompt,
           format,
+          duration: "8s",
           style,
           generateAudio,
           idempotencyKey: crypto.randomUUID(),
@@ -196,12 +197,12 @@ function Studio() {
                   <label>FORMAT</label>
 
                   <div className="seg">
-                    {["9:16", "16:9", "1:1"].map((item) => (
+                    {(["9:16", "16:9", "1:1"] as const).map((item) => (
                       <button
                         key={item}
                         type="button"
                         className={format === item ? "selected" : ""}
-                        onClick={() => { if (item === "9:16" || item === "16:9" || item === "1:1") setFormat(item); }}
+                        onClick={() => setFormat(item)}
                         disabled={creating}
                       >
                         {item}
