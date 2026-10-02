@@ -35,7 +35,7 @@ function Studio() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => { const token = getAccessToken(); if (!token) return; getStudioState({ data: { accessToken: token } }).then((state) => setCredits(state.credits)).catch(() => setCredits(null)); }, []);
-  useEffect(() => { if (!generationId) return; const token = getAccessToken(); if (!token) return; const poll = async () => { try { const next = await getGeneration({ data: { accessToken: token, generationId } }); setGeneration(next); if (["queued", "submitted", "processing"].includes(next.status)) window.setTimeout(poll, 5000); } catch { /* status will be retried next visit */ } }; void poll(); }, [generationId]);
+  useEffect(() => { if (!generationId) return; const token = getAccessToken(); if (!token) return; const poll = async () => { try { const next = await getGeneration({ data: { accessToken: token, generationId } }); setGeneration(next); if (["queued", "starting", "submitted", "processing"].includes(next.status)) window.setTimeout(poll, 5000); } catch { /* status will be retried next visit */ } }; void poll(); }, [generationId]);
   const estimatedCost = 32;
 
   const handleCreate = async () => {
@@ -72,7 +72,7 @@ function Studio() {
 
       setGenerationId(result.generationId);
       setGeneration({ status: result.status, output_url: null, error_code: null, project_id: "" });
-      setCredits((current) => current === null ? current : current - result.credits);
+      if (!result.duplicate) setCredits((current) => current === null ? current : current - result.credits);
     } catch (err) {
       console.error(err);
 
