@@ -34,7 +34,19 @@ function Studio() {
   const [generation, setGeneration] = useState<{ status: string; output_url: string | null; error_code: string | null; project_id: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { const token = getAccessToken(); if (!token) return; getStudioState({ data: { accessToken: token } }).then((state) => setCredits(state.credits)).catch(() => setCredits(null)); }, []);
+  useEffect(() => {
+    const token = getAccessToken();
+    if (!token) return;
+    getStudioState({ data: { accessToken: token } })
+      .then((state) => setCredits(state.credits))
+      .catch(() => setCredits(null));
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const preset = params.get("prompt");
+    if (preset?.trim()) setPrompt(preset.trim().slice(0, 4000));
+  }, []);
   useEffect(() => { if (!generationId) return; const token = getAccessToken(); if (!token) return; const poll = async () => { try { const next = await getGeneration({ data: { accessToken: token, generationId } }); setGeneration(next); if (["queued", "starting", "submitted", "processing"].includes(next.status)) window.setTimeout(poll, 5000); } catch { /* status will be retried next visit */ } }; void poll(); }, [generationId]);
   const estimatedCost = 32;
 
