@@ -1,8 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import {
-  supabaseUserFetch,
-  supabaseAdminFetch,
-} from "./supabase-rest.server";
+import { supabaseUserFetch } from "./supabase-rest.server";
 
 const REPLICATE_API_URL =
   "https://api.replicate.com/v1/models/google/veo-3.1-fast/predictions";
@@ -197,17 +194,16 @@ export const createVideoGeneration = createServerFn({
    * 4. Generation teknik bilgilerini kaydet
    */
   const updateGenerationResponse =
-    await supabaseAdminFetch(
-      `/rest/v1/generations?id=eq.${generation.generation_id}`,
+    await supabaseUserFetch(
+      "/rest/v1/rpc/system_set_generation_options",
+      data.accessToken,
       {
-        method: "PATCH",
-        headers: {
-          Prefer: "return=minimal",
-        },
+        method: "POST",
         body: JSON.stringify({
-          resolution,
-          generate_audio: generateAudio,
-          model_version: MODEL,
+          p_generation_id: generation.generation_id,
+          p_resolution: resolution,
+          p_generate_audio: generateAudio,
+          p_model_version: MODEL,
         }),
       },
     );
@@ -296,6 +292,7 @@ export const createVideoGeneration = createServerFn({
   const submittedResponse =
     await supabaseAdminFetch(
       "/rest/v1/rpc/system_mark_generation_submitted",
+      data.accessToken,
       {
         method: "POST",
 
