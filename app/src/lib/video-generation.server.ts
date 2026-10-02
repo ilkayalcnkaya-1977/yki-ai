@@ -4,7 +4,7 @@ import { requireSupabaseUser, rpcAsSystem, rpcAsUser, supabaseUserFetch } from "
 
 const model = "google/veo-3.1-fast";
 const replicateUrl = `https://api.replicate.com/v1/models/${model}/predictions`;
-const inputSchema = z.object({ accessToken: z.string(), prompt: z.string().trim().min(1).max(4000), format: z.enum(["9:16", "16:9", "1:1"]), duration: z.literal("8s").default("8s"), style: z.enum(["cinematic", "realistic", "anime", "3d"]), generateAudio: z.boolean(), idempotencyKey: z.string().uuid() });
+const inputSchema = z.object({ accessToken: z.string(), prompt: z.string().trim().min(1).max(4000), format: z.enum(["9:16", "16:9", "1:1"]), duration: z.literal("8s"), style: z.enum(["cinematic", "realistic", "anime", "3d"]), generateAudio: z.boolean(), idempotencyKey: z.string().uuid() });
 const creditsFor = (seconds: number) => seconds * 4;
 function requireReplicate() { const token = process.env.REPLICATE_API_TOKEN; if (!token) throw new Error("Video generation is not configured yet. Please contact the workspace administrator."); return { token }; }
 function publicError(error: unknown) { return error instanceof Error ? error.message : "The video could not be started. Please try again."; }
