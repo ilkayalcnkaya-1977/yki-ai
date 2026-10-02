@@ -58,6 +58,30 @@ export function getAccessToken() {
   return localStorage.getItem(ACCESS_TOKEN_KEY);
 }
 
+export async function refreshSession() {
+  const refreshToken =
+    typeof window === "undefined"
+      ? null
+      : localStorage.getItem(REFRESH_TOKEN_KEY);
+
+  if (!refreshToken) return null;
+
+  const response = await authRequest("token?grant_type=refresh_token", {
+    method: "POST",
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || !data?.access_token) {
+    clearSession();
+    return null;
+  }
+
+  saveSession(data as AuthSession);
+  return data as AuthSession;
+}
+
 export async function getCurrentUser() {
   const accessToken = getAccessToken();
   if (!accessToken) return null;
