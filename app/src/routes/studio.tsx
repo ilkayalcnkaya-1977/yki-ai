@@ -20,7 +20,7 @@ export const Route = createFileRoute("/studio")({
 
 function Studio() {
   const [format, setFormat] = useState<"9:16" | "16:9" | "1:1">("9:16");
-  const duration = "8s" as const;
+  
   const [prompt, setPrompt] = useState(
     "A street racer drives through a neon Istanbul at midnight. The city suddenly transforms into a futuristic metropolis while the camera races alongside the car."
   );
@@ -75,7 +75,7 @@ function Studio() {
           accessToken,
           prompt: cleanPrompt,
           format,
-          duration,
+          duration: "8s",
           style,
           generateAudio,
           idempotencyKey: crypto.randomUUID(),
@@ -197,7 +197,7 @@ function Studio() {
                   <label>FORMAT</label>
 
                   <div className="seg">
-                    {["9:16", "16:9", "1:1"].map((item) => (
+                    {(["9:16", "16:9", "1:1"] as const).map((item) => (
                       <button
                         key={item}
                         type="button"
