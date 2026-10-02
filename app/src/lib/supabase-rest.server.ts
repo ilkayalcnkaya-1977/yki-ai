@@ -62,10 +62,56 @@ export async function supabaseUserFetch(
     headers.set("Content-Type", "application/json");
   }
 
-  return fetch(`${url}${path}`, {
-    ...init,
-    headers,
-  });
+  const requestUrl = `${url}${path}`;
+
+  // Supabase can intermittently reject a fresh authenticated JWT with
+  // PGRST303 ("JWT issued at future"). Retry that transient error.
+  const delays = [0, 500, 1000, 2000];
+
+  for (let attempt = 0; attempt < delays.length; attempt += 1) {
+    if (delays[attempt] > 0) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, delays[attempt]),
+      );
+    }
+
+    const response = await fetch(requestUrl, {
+      ...init,
+      headers,
+    });
+
+    if (response.status !== 401) {
+      return response;
+    }
+
+    const text = await response.text();
+    let isJwtTimingError = false;
+
+    try {
+      const payload = JSON.parse(text) as {
+        code?: string;
+        message?: string;
+      };
+
+      isJwtTimingError =
+        payload.code === "PGRST303" ||
+        payload.message === "JWT issued at future";
+    } catch {
+      isJwtTimingError =
+        text.includes("PGRST303") ||
+        text.includes("JWT issued at future");
+    }
+
+    if (!isJwtTimingError || attempt === delays.length - 1) {
+      return new Response(text, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      });
+    }
+  }
+
+  throw new Error("Supabase request retry failed");
 }
 
 export async function supabaseAdminFetch(
