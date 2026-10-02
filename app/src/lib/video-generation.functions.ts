@@ -290,7 +290,7 @@ export const createVideoGeneration = createServerFn({
    * 6. Replicate job ID'sini Supabase'e kaydet
    */
   const submittedResponse =
-    await supabaseAdminFetch(
+    await supabaseUserFetch(
       "/rest/v1/rpc/system_mark_generation_submitted",
       data.accessToken,
       {
