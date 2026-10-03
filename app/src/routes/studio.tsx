@@ -294,11 +294,11 @@ function Studio() {
                   <div className="seg">
                     <button
                       type="button"
-                      className="selected"
-                      onClick={() => setDuration("8s")}
+                      className={duration === "5s" ? "selected" : ""}
+                      onClick={() => setDuration("5s")}
                       disabled={creating}
                     >
-                      8s
+                      5s
                     </button>
 
                     <button type="button" disabled title="Coming soon">
