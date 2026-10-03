@@ -19,8 +19,9 @@ const requireHiggsfield = createServerOnlyFn(() => {
 });
 
 function getDurationSeconds(value: string) {
+  if (value === "5s") return 5;
   if (value === "8s") return 8;
-  throw new Error("Only 8 second generation is currently enabled");
+  throw new Error("Only 5 or 8 second generation is currently enabled");
 }
 
 function getAspectRatio(format: string) {
