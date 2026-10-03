@@ -4,7 +4,7 @@ import {
 } from "@tanstack/react-start";
 import { supabaseAdminFetch, supabaseUserFetch } from "./supabase-rest.server";
 
-const HIGGSFIELD_MODEL = "kling-video/v3.0/std/text-to-video";
+const HIGGSFIELD_MODEL = "kling-video/v3.0-turbo/text-to-video";
 const HIGGSFIELD_API_BASE = "https://api.higgsfield.ai";
 const CREDITS_PER_SECOND = 4;
 
@@ -219,7 +219,7 @@ export const createVideoGeneration = createServerFn({
 
   try {
     providerResponse = await higgsfieldRequest(
-      "/kling-video/v3.0/std/text-to-video",
+      "/kling-video/v3.0-turbo/text-to-video",
       higgsfield.apiKey,
       {
         method: "POST",
