@@ -151,7 +151,7 @@ function Studio() {
           format,
           duration,
           style: "cinematic",
-          generateAudio: true,
+          generateAudio: false,
         },
       });
 
@@ -392,7 +392,7 @@ function Studio() {
                 ) : (
                   <span>
                     {creating
-                      ? "YKI AI is sending your idea to the video engine."
+                      ? "YKI AI GPU Engine is preparing your video."
                       : generationId
                         ? `Generation ID: ${generationId}`
                         : "Write an idea and start creating."}
@@ -402,7 +402,7 @@ function Studio() {
 
               <div className="preview-bottom">
                 <span>YKI AI ENGINE</span>
-                <span>1080P · AUDIO</span>
+                <span>720P · VIDEO</span>
               </div>
             </div>
           </div>
