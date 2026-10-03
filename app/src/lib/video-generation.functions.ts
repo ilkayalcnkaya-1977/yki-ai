@@ -5,32 +5,30 @@ import {
 import { supabaseAdminFetch, supabaseUserFetch } from "./supabase-rest.server";
 
 const YKI_ENGINE_MODEL = "wan2.2-ti2v-5b";
+const CREDITS_PER_SECOND = 4;
 
 const requireYkiEngine = createServerOnlyFn(() => {
   const url = process.env.YKI_ENGINE_URL;
   const apiKey = process.env.YKI_ENGINE_API_KEY;
-  if (!url || !apiKey) throw new Error("YKI Engine is not configured");
-  return { url: url.replace(/\\/$/, ""), apiKey };
+
+  if (!url || !apiKey) {
+    throw new Error("YKI Engine is not configured");
+  }
+
+  return { url: url.replace(/\/$/, ""), apiKey };
 });
 
 function getDurationSeconds(value: string) {
-  if (value === "8s") {
-    return 8;
-  }
-
+  if (value === "8s") return 8;
   throw new Error("Only 8 second generation is currently enabled");
 }
 
 function getResolution(format: string) {
-  if (
-    format === "9:16" ||
-    format === "16:9" ||
-    format === "1:1"
-  ) {
-    return "1080p";
+  if (format === "9:16" || format === "16:9" || format === "1:1") {
+    return "720p";
   }
 
-  return "1080p";
+  return "720p";
 }
 
 export const createVideoGeneration = createServerFn({
@@ -47,51 +45,31 @@ export const createVideoGeneration = createServerFn({
 ).handler(async ({ data }) => {
   const prompt = data.prompt.trim();
 
-  if (!prompt) {
-    throw new Error("Prompt is required");
-  }
-
-  if (prompt.length > 4000) {
-    throw new Error("Prompt is too long");
-  }
+  if (!prompt) throw new Error("Prompt is required");
+  if (prompt.length > 4000) throw new Error("Prompt is too long");
 
   const durationSeconds = getDurationSeconds(data.duration);
   const resolution = getResolution(data.format);
-  const generateAudio = data.generateAudio ?? true;
 
+  // Wan2.2 TI2V-5B currently generates video only.
+  // Audio is deliberately disabled until a separate YKI audio pipeline is connected.
+  const generateAudio = false;
   const credits = durationSeconds * CREDITS_PER_SECOND;
 
-  /*
-   * 1. Kullanıcının workspace'ini bul
-   */
   const workspaceResponse = await supabaseUserFetch(
     "/rest/v1/workspaces?select=id&limit=1",
     data.accessToken,
   );
 
   if (!workspaceResponse.ok) {
-    const errorText = await workspaceResponse.text();
-
-    throw new Error(
-      `Unable to load workspace: ${errorText}`,
-    );
+    throw new Error(`Unable to load workspace: ${await workspaceResponse.text()}`);
   }
 
-  const workspaces = (await workspaceResponse.json()) as Array<{
-    id: string;
-  }>;
-
+  const workspaces = (await workspaceResponse.json()) as Array<{ id: string }>;
   const workspace = workspaces[0];
 
-  if (!workspace) {
-    throw new Error(
-      "No workspace found for this account",
-    );
-  }
+  if (!workspace) throw new Error("No workspace found for this account");
 
-  /*
-   * 2. Yeni proje oluştur
-   */
   const projectResponse = await supabaseUserFetch(
     "/rest/v1/rpc/create_project",
     data.accessToken,
@@ -107,18 +85,10 @@ export const createVideoGeneration = createServerFn({
   );
 
   if (!projectResponse.ok) {
-    const errorText = await projectResponse.text();
-
-    throw new Error(
-      `Unable to create project: ${errorText}`,
-    );
+    throw new Error(`Unable to create project: ${await projectResponse.text()}`);
   }
 
   const projectId = (await projectResponse.json()) as string;
-
-  /*
-   * 3. Kredi rezervasyonu
-   */
   const idempotencyKey = crypto.randomUUID();
 
   const reserveResponse = await supabaseUserFetch(
@@ -140,11 +110,7 @@ export const createVideoGeneration = createServerFn({
   );
 
   if (!reserveResponse.ok) {
-    const errorText = await reserveResponse.text();
-
-    throw new Error(
-      `Credit reservation failed: ${errorText}`,
-    );
+    throw new Error(`Credit reservation failed: ${await reserveResponse.text()}`);
   }
 
   const reservation = (await reserveResponse.json()) as Array<{
@@ -156,64 +122,41 @@ export const createVideoGeneration = createServerFn({
   const generation = reservation[0];
 
   if (!generation?.generation_id) {
-    throw new Error(
-      "Generation reservation returned no generation ID",
-    );
+    throw new Error("Generation reservation returned no generation ID");
   }
 
-  /*
-   * Aynı istek daha önce oluşturulduysa
-   * yeni Replicate işi oluşturma.
-   */
   if (generation.duplicate) {
     return {
       generationId: generation.generation_id,
       status: generation.status,
       duplicate: true,
+      credits,
     };
   }
 
-  /*
-   * 4. Generation teknik bilgilerini kaydet
-   */
-  const updateGenerationResponse =
-    await supabaseUserFetch(
-      "/rest/v1/rpc/system_set_generation_options",
-      data.accessToken,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          p_generation_id: generation.generation_id,
-          p_resolution: resolution,
-          p_generate_audio: generateAudio,
-          p_model_version: MODEL,
-        }),
-      },
-    );
+  const updateGenerationResponse = await supabaseUserFetch(
+    "/rest/v1/rpc/system_set_generation_options",
+    data.accessToken,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        p_generation_id: generation.generation_id,
+        p_resolution: resolution,
+        p_generate_audio: generateAudio,
+        p_model_version: YKI_ENGINE_MODEL,
+      }),
+    },
+  );
 
   if (!updateGenerationResponse.ok) {
-    await supabaseUserFetch(
-      "/rest/v1/rpc/refund_generation",
-      data.accessToken,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          p_generation_id: generation.generation_id,
-        }),
-      },
-    );
+    await supabaseUserFetch("/rest/v1/rpc/refund_generation", data.accessToken, {
+      method: "POST",
+      body: JSON.stringify({ p_generation_id: generation.generation_id }),
+    });
 
-    const errorText =
-      await updateGenerationResponse.text();
-
-    throw new Error(
-      `Generation setup failed: ${errorText}`,
-    );
+    throw new Error(`Generation setup failed: ${await updateGenerationResponse.text()}`);
   }
 
-  /*
-   * 5. YKI Engine üzerinde gerçek video üretimini başlat.
-   */
   const engine = requireYkiEngine();
   let engineResponse: Response;
 
@@ -237,6 +180,7 @@ export const createVideoGeneration = createServerFn({
       method: "POST",
       body: JSON.stringify({ p_generation_id: generation.generation_id }),
     });
+
     throw new Error(
       `YKI Engine unreachable: ${error instanceof Error ? error.message : "connection failed"}`,
     );
@@ -244,59 +188,40 @@ export const createVideoGeneration = createServerFn({
 
   if (!engineResponse.ok) {
     const errorText = await engineResponse.text();
+
     await supabaseUserFetch("/rest/v1/rpc/refund_generation", data.accessToken, {
       method: "POST",
       body: JSON.stringify({ p_generation_id: generation.generation_id }),
     });
+
     throw new Error(`YKI Engine rejected generation: ${errorText}`);
   }
 
   const engineJob = (await engineResponse.json()) as {
     job_id: string;
     status: string;
+    model: string;
   };
 
-  /*
-   * 6. YKI Engine job ID'sini Supabase'e kaydet.
-   */
-  const submittedResponse = await supabaseUserFetch(
-    "/rest/v1/rpc/system_mark_generation_submitted",
-    data.accessToken,
-    {
+  if (!engineJob.job_id) {
+    await supabaseUserFetch("/rest/v1/rpc/refund_generation", data.accessToken, {
       method: "POST",
-      body: JSON.stringify({
-        p_generation_id: generation.generation_id,
-        p_provider_job_id: engineJob.job_id,
-        p_model_version: YKI_ENGINE_MODEL,
-      }),
-    },
-  );
+      body: JSON.stringify({ p_generation_id: generation.generation_id }),
+    });
 
-  if (!submittedResponse.ok) {
-    throw new Error(
-      "YKI Engine job was created but generation could not be marked as submitted",
-    );
+    throw new Error("YKI Engine returned no job ID");
   }
 
-  /*
-   * 7. Studio'ya sonucu döndür
-   */
+  // The engine atomically records acceptance with the service role before
+  // starting the GPU task. The client never gets to mark a generation submitted.
   return {
-    generationId:
-      generation.generation_id,
-
-    providerJobId:
-      engineJob.job_id,
-
-    status:
-      prediction.status,
-
+    generationId: generation.generation_id,
+    providerJobId: engineJob.job_id,
+    status: engineJob.status,
     credits,
-
     duplicate: false,
   };
 });
-
 
 export const getVideoGenerationStatus = createServerFn({
   method: "POST",
@@ -308,9 +233,7 @@ export const getVideoGenerationStatus = createServerFn({
     data.accessToken,
   );
 
-  if (!response.ok) {
-    throw new Error("Unable to read generation status");
-  }
+  if (!response.ok) throw new Error("Unable to read generation status");
 
   const rows = (await response.json()) as Array<{
     id: string;
@@ -326,15 +249,19 @@ export const getVideoGenerationStatus = createServerFn({
 
   const generation = rows[0];
 
-  if (!generation) {
-    throw new Error("Generation not found");
-  }
+  if (!generation) throw new Error("Generation not found");
 
   let videoUrl: string | null = null;
 
   if (generation.status === "completed" && generation.output_url) {
+    const cleanPath = generation.output_url
+      .replace(/^\/+/, "")
+      .split("/")
+      .map(encodeURIComponent)
+      .join("/");
+
     const signResponse = await supabaseAdminFetch(
-      `/storage/v1/object/sign/yki-media/${generation.output_url.replace(/^\/+/, "").split("/").map(encodeURIComponent).join("/")}`,
+      `/storage/v1/object/sign/yki-media/${cleanPath}`,
       {
         method: "POST",
         body: JSON.stringify({ expiresIn: 3600 }),
@@ -343,10 +270,11 @@ export const getVideoGenerationStatus = createServerFn({
 
     if (signResponse.ok) {
       const signed = (await signResponse.json()) as { signedURL?: string };
+
       if (signed.signedURL) {
         videoUrl = signed.signedURL.startsWith("http")
           ? signed.signedURL
-          : `${"https://dtdygokcjjoprqfjmmcz.supabase.co"}${signed.signedURL}`;
+          : `https://dtdygokcjjoprqfjmmcz.supabase.co${signed.signedURL}`;
       }
     }
   }
