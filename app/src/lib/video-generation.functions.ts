@@ -283,9 +283,31 @@ export const createVideoGeneration = createServerFn({
       },
     );
 
-    throw new Error(
-      `Video provider error: ${errorText}`,
-    );
+    let providerMessage = errorText;
+
+    try {
+      const payload = JSON.parse(errorText) as {
+        title?: string;
+        detail?: string;
+        status?: number;
+      };
+
+      if (
+        payload.status === 402 ||
+        payload.title?.toLowerCase().includes("insufficient credit") ||
+        payload.detail?.toLowerCase().includes("insufficient credit")
+      ) {
+        providerMessage =
+          "Replicate hesabında sağlayıcı kredisi yok. YKI AI krediniz geri iade edildi. Replicate Billing'den sağlayıcı bakiyesini yükledikten sonra tekrar deneyin.";
+      }
+    } catch {
+      if (errorText.toLowerCase().includes("insufficient credit")) {
+        providerMessage =
+          "Replicate hesabında sağlayıcı kredisi yok. YKI AI krediniz geri iade edildi. Replicate Billing'den sağlayıcı bakiyesini yükledikten sonra tekrar deneyin.";
+      }
+    }
+
+    throw new Error(`Video provider error: ${providerMessage}`);
   }
 
   const prediction =
