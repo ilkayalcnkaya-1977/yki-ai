@@ -4,37 +4,13 @@ import {
 } from "@tanstack/react-start";
 import { supabaseAdminFetch, supabaseUserFetch } from "./supabase-rest.server";
 
-const REPLICATE_API_URL =
-  "https://api.replicate.com/v1/models/google/veo-3.1-fast/predictions";
+const YKI_ENGINE_MODEL = "wan2.2-ti2v-5b";
 
-const MODEL = "google/veo-3.1-fast";
-
-// YKI AI kredi sistemi
-// MVP: 4 kredi / saniye
-const CREDITS_PER_SECOND = 4;
-
-const requireReplicateTokens = createServerOnlyFn(() => {
-  const tokens = [
-    process.env.REPLICATE_API_TOKEN,
-    process.env.REPLICATE_API_TOKEN_2,
-    process.env.REPLICATE_API_TOKEN_3,
-  ].filter((token): token is string => Boolean(token));
-
-  if (tokens.length === 0) {
-    throw new Error("No Replicate API token is configured");
-  }
-
-  return tokens;
-});
-
-const requireWebhookUrl = createServerOnlyFn(() => {
-  const url = process.env.REPLICATE_WEBHOOK_URL;
-
-  if (!url) {
-    throw new Error("REPLICATE_WEBHOOK_URL is not configured");
-  }
-
-  return url;
+const requireYkiEngine = createServerOnlyFn(() => {
+  const url = process.env.YKI_ENGINE_URL;
+  const apiKey = process.env.YKI_ENGINE_API_KEY;
+  if (!url || !apiKey) throw new Error("YKI Engine is not configured");
+  return { url: url.replace(/\\/$/, ""), apiKey };
 });
 
 function getDurationSeconds(value: string) {
@@ -78,11 +54,6 @@ export const createVideoGeneration = createServerFn({
   if (prompt.length > 4000) {
     throw new Error("Prompt is too long");
   }
-
-  // Validate provider configuration before creating a project or reserving
-  // credits. A missing production secret must not leave a charged generation.
-  const replicateTokens = requireReplicateTokens();
-  const webhookUrl = requireWebhookUrl();
 
   const durationSeconds = getDurationSeconds(data.duration);
   const resolution = getResolution(data.format);
@@ -160,7 +131,7 @@ export const createVideoGeneration = createServerFn({
         p_project_id: projectId,
         p_prompt: prompt,
         p_credits: credits,
-        p_model: MODEL,
+        p_model: YKI_ENGINE_MODEL,
         p_aspect_ratio: data.format,
         p_duration_seconds: durationSeconds,
         p_idempotency_key: idempotencyKey,
@@ -241,149 +212,69 @@ export const createVideoGeneration = createServerFn({
   }
 
   /*
-   * 5. Replicate üzerinde gerçek video üretimini başlat
+   * 5. YKI Engine üzerinde gerçek video üretimini başlat.
    */
-  let replicateResponse: Response | null = null;
-  let lastProviderError = "";
+  const engine = requireYkiEngine();
+  let engineResponse: Response;
 
-  // Provider hesabının kredisi biterse diğer yapılandırılmış tokenı dene.
-  // Böylece tek bir Replicate hesabının 402 hatası tüm üretimleri kilitlemez.
-  for (const token of replicateTokens) {
-    const response = await fetch(
-      REPLICATE_API_URL,
-      {
-        method: "POST",
-
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          Prefer: "respond-async",
-        },
-
-        body: JSON.stringify({
-          input: {
-            prompt,
-            aspect_ratio: data.format,
-            duration: durationSeconds,
-            resolution,
-            generate_audio: generateAudio,
-          },
-
-          webhook: webhookUrl,
-
-          webhook_events_filter: [
-            "completed",
-          ],
-        }),
+  try {
+    engineResponse = await fetch(`${engine.url}/v1/generations`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-YKI-Engine-Key": engine.apiKey,
       },
+      body: JSON.stringify({
+        generation_id: generation.generation_id,
+        prompt,
+        aspect_ratio: data.format,
+        duration_seconds: durationSeconds,
+        generate_audio: generateAudio,
+      }),
+    });
+  } catch (error) {
+    await supabaseUserFetch("/rest/v1/rpc/refund_generation", data.accessToken, {
+      method: "POST",
+      body: JSON.stringify({ p_generation_id: generation.generation_id }),
+    });
+    throw new Error(
+      `YKI Engine unreachable: ${error instanceof Error ? error.message : "connection failed"}`,
     );
-
-    if (response.ok) {
-      replicateResponse = response;
-      break;
-    }
-
-    const errorText = await response.text();
-    lastProviderError = errorText;
-
-    let isInsufficientCredit = false;
-
-    try {
-      const payload = JSON.parse(errorText) as {
-        title?: string;
-        detail?: string;
-        status?: number;
-      };
-
-      isInsufficientCredit =
-        response.status === 402 ||
-        payload.status === 402 ||
-        payload.title?.toLowerCase().includes("insufficient credit") === true ||
-        payload.detail?.toLowerCase().includes("insufficient credit") === true;
-    } catch {
-      isInsufficientCredit =
-        response.status === 402 ||
-        errorText.toLowerCase().includes("insufficient credit");
-    }
-
-    // Sadece sağlayıcı bakiyesi hatasında sıradaki hesabı dene.
-    // Token/auth/config hatalarında yanlış hesabı sessizce kullanma.
-    if (!isInsufficientCredit) {
-      break;
-    }
   }
 
-  if (!replicateResponse) {
-    await supabaseUserFetch(
-      "/rest/v1/rpc/refund_generation",
-      data.accessToken,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          p_generation_id: generation.generation_id,
-        }),
-      },
-    );
-
-    let providerMessage = lastProviderError;
-
-    try {
-      const payload = JSON.parse(lastProviderError) as {
-        title?: string;
-        detail?: string;
-        status?: number;
-      };
-
-      if (
-        payload.status === 402 ||
-        payload.title?.toLowerCase().includes("insufficient credit") ||
-        payload.detail?.toLowerCase().includes("insufficient credit")
-      ) {
-        providerMessage =
-          "Video sağlayıcı hesaplarının kredisi yetersiz. YKI AI krediniz geri iade edildi.";
-      }
-    } catch {
-      if (lastProviderError.toLowerCase().includes("insufficient credit")) {
-        providerMessage =
-          "Video sağlayıcı hesaplarının kredisi yetersiz. YKI AI krediniz geri iade edildi.";
-      }
-    }
-
-    throw new Error(`Video provider error: ${providerMessage}`);
+  if (!engineResponse.ok) {
+    const errorText = await engineResponse.text();
+    await supabaseUserFetch("/rest/v1/rpc/refund_generation", data.accessToken, {
+      method: "POST",
+      body: JSON.stringify({ p_generation_id: generation.generation_id }),
+    });
+    throw new Error(`YKI Engine rejected generation: ${errorText}`);
   }
 
-  const prediction =
-    (await replicateResponse.json()) as {
-      id: string;
-      status: string;
-    };
+  const engineJob = (await engineResponse.json()) as {
+    job_id: string;
+    status: string;
+  };
 
   /*
-   * 6. Replicate job ID'sini Supabase'e kaydet
+   * 6. YKI Engine job ID'sini Supabase'e kaydet.
    */
-  const submittedResponse =
-    await supabaseUserFetch(
-      "/rest/v1/rpc/system_mark_generation_submitted",
-      data.accessToken,
-      {
-        method: "POST",
-
-        body: JSON.stringify({
-          p_generation_id:
-            generation.generation_id,
-
-          p_provider_job_id:
-            prediction.id,
-
-          p_model_version:
-            MODEL,
-        }),
-      },
-    );
+  const submittedResponse = await supabaseUserFetch(
+    "/rest/v1/rpc/system_mark_generation_submitted",
+    data.accessToken,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        p_generation_id: generation.generation_id,
+        p_provider_job_id: engineJob.job_id,
+        p_model_version: YKI_ENGINE_MODEL,
+      }),
+    },
+  );
 
   if (!submittedResponse.ok) {
     throw new Error(
-      "Provider job was created but generation could not be marked as submitted",
+      "YKI Engine job was created but generation could not be marked as submitted",
     );
   }
 
@@ -395,7 +286,7 @@ export const createVideoGeneration = createServerFn({
       generation.generation_id,
 
     providerJobId:
-      prediction.id,
+      engineJob.job_id,
 
     status:
       prediction.status,
