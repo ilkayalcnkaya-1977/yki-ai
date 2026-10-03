@@ -1,4 +1,7 @@
-import { createServerFn } from "@tanstack/react-start";
+import {
+  createServerFn,
+  createServerOnlyFn,
+} from "@tanstack/react-start";
 import { supabaseUserFetch } from "./supabase-rest.server";
 
 const REPLICATE_API_URL =
@@ -10,7 +13,7 @@ const MODEL = "google/veo-3.1-fast";
 // MVP: 4 kredi / saniye
 const CREDITS_PER_SECOND = 4;
 
-function requireReplicateToken() {
+const requireReplicateToken = createServerOnlyFn(() => {
   const token = process.env.REPLICATE_API_TOKEN;
 
   if (!token) {
@@ -18,9 +21,9 @@ function requireReplicateToken() {
   }
 
   return token;
-}
+});
 
-function requireWebhookUrl() {
+const requireWebhookUrl = createServerOnlyFn(() => {
   const url = process.env.REPLICATE_WEBHOOK_URL;
 
   if (!url) {
@@ -28,7 +31,7 @@ function requireWebhookUrl() {
   }
 
   return url;
-}
+});
 
 function getDurationSeconds(value: string) {
   if (value === "8s") {
@@ -71,6 +74,11 @@ export const createVideoGeneration = createServerFn({
   if (prompt.length > 4000) {
     throw new Error("Prompt is too long");
   }
+
+  // Validate provider configuration before creating a project or reserving
+  // credits. A missing production secret must not leave a charged generation.
+  const replicateToken = requireReplicateToken();
+  const webhookUrl = requireWebhookUrl();
 
   const durationSeconds = getDurationSeconds(data.duration);
   const resolution = getResolution(data.format);
@@ -237,7 +245,7 @@ export const createVideoGeneration = createServerFn({
       method: "POST",
 
       headers: {
-        Authorization: `Bearer ${requireReplicateToken()}`,
+        Authorization: `Bearer ${replicateToken}`,
         "Content-Type": "application/json",
         Prefer: "respond-async",
       },
@@ -251,7 +259,7 @@ export const createVideoGeneration = createServerFn({
           generate_audio: generateAudio,
         },
 
-        webhook: requireWebhookUrl(),
+        webhook: webhookUrl,
 
         webhook_events_filter: [
           "completed",
