@@ -11,7 +11,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { createVideoGeneration } from "../lib/video-generation.functions";
+import { createVideoGeneration, getVideoGenerationStatus } from "../lib/video-generation.functions";
 import {
   getAccessToken,
   getCreditBalance,
@@ -33,6 +33,8 @@ function Studio() {
   const [generationId, setGenerationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [generationStatus, setGenerationStatus] = useState<string | null>(null);
 
   const credits = duration === "8s" ? 32 : 32;
 
@@ -51,8 +53,62 @@ function Studio() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!generationId) return;
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const poll = async () => {
+      const accessToken = getAccessToken();
+      if (!accessToken || cancelled) return;
+
+      try {
+        const statusResult = await getVideoGenerationStatus({
+          data: { accessToken, generationId },
+        });
+
+        if (cancelled) return;
+
+        setGenerationStatus(statusResult.status);
+        if (statusResult.videoUrl) setVideoUrl(statusResult.videoUrl);
+
+        if (statusResult.status === "completed") {
+          const balance = await getCreditBalance(accessToken);
+          if (balance !== null) setCreditBalance(balance);
+          return;
+        }
+
+        if (statusResult.status === "refunded") {
+          const balance = await getCreditBalance(accessToken);
+          if (balance !== null) setCreditBalance(balance);
+          setError(statusResult.error_code
+            ? `Video could not be produced. Your credits were returned. (${statusResult.error_code})`
+            : "Video could not be produced. Your credits were returned.");
+          return;
+        }
+
+        timer = setTimeout(poll, 2500);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Unable to check video status.");
+          timer = setTimeout(poll, 5000);
+        }
+      }
+    };
+
+    void poll();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [generationId]);
+
   const handleCreate = async () => {
     setError(null);
+    setVideoUrl(null);
+    setGenerationStatus(null);
 
     const cleanPrompt = prompt.trim();
 
@@ -317,20 +373,31 @@ function Studio() {
                 </div>
 
                 <strong>
-                  {creating
-                    ? "Starting your video..."
-                    : generationId
-                      ? "Video generation started"
-                      : "Your video will appear here"}
+                  {videoUrl
+                    ? "Your video is ready"
+                    : creating
+                      ? "Starting your video..."
+                      : generationId
+                        ? `Video is ${generationStatus ?? "processing"}`
+                        : "Your video will appear here"}
                 </strong>
 
-                <span>
-                  {creating
-                    ? "YKI AI is sending your idea to the video engine."
-                    : generationId
-                      ? `Generation ID: ${generationId}`
-                      : "Write an idea and start creating."}
-                </span>
+                {videoUrl ? (
+                  <video
+                    src={videoUrl}
+                    controls
+                    playsInline
+                    className="studio-result-video"
+                  />
+                ) : (
+                  <span>
+                    {creating
+                      ? "YKI AI is sending your idea to the video engine."
+                      : generationId
+                        ? `Generation ID: ${generationId}`
+                        : "Write an idea and start creating."}
+                  </span>
+                )}
               </div>
 
               <div className="preview-bottom">
