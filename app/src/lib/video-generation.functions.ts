@@ -226,7 +226,7 @@ export const createVideoGeneration = createServerFn({
 
   if (useYkiEngine) {
     try {
-      const engineResponse = await fetch(\`${ykiEngine.url}/v1/generations\`, {
+      const engineResponse = await fetch(`${ykiEngine.url}/v1/generations`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -244,7 +244,7 @@ export const createVideoGeneration = createServerFn({
       if (!engineResponse.ok) {
         const errorText = await engineResponse.text();
         await refundGeneration(generation.generation_id, "YKI_ENGINE_REJECTED");
-        throw new Error(\`YKI Engine rejected generation: ${errorText}\`);
+        throw new Error(`YKI Engine rejected generation: ${errorText}`);
       }
 
       const engineJob = (await engineResponse.json()) as {
@@ -268,7 +268,7 @@ export const createVideoGeneration = createServerFn({
       if (error instanceof Error && error.message.includes("YKI Engine")) throw error;
       await refundGeneration(generation.generation_id, "YKI_ENGINE_UNREACHABLE");
       throw new Error(
-        \`YKI Engine unreachable: ${error instanceof Error ? error.message : "connection failed"}\`,
+        `YKI Engine unreachable: ${error instanceof Error ? error.message : "connection failed"}`,
       );
     }
   }
