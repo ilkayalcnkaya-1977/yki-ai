@@ -19,6 +19,14 @@ async function authRequest(path: string, init: RequestInit = {}) {
   return fetch(SUPABASE_URL + "/auth/v1/" + path, { ...init, headers });
 }
 
+async function restRequest(path: string, accessToken: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers);
+  headers.set("apikey", SUPABASE_PUBLISHABLE_KEY);
+  headers.set("Authorization", "Bearer " + accessToken);
+  headers.set("Content-Type", "application/json");
+  return fetch(SUPABASE_URL + "/rest/v1/" + path, { ...init, headers });
+}
+
 export async function signUp(email: string, password: string, displayName: string) {
   const response = await authRequest("signup", {
     method: "POST",
@@ -91,4 +99,30 @@ export async function getCurrentUser() {
     return null;
   }
   return response.json() as Promise<{ id: string; email?: string; user_metadata?: Record<string, unknown> }>;
+}
+
+export async function getCreditBalance(accessToken?: string) {
+  const token = accessToken ?? getAccessToken();
+  if (!token) return null;
+
+  const workspaceResponse = await restRequest(
+    "workspaces?select=id&limit=1",
+    token,
+  );
+
+  if (!workspaceResponse.ok) return null;
+
+  const workspaces = (await workspaceResponse.json()) as Array<{ id: string }>;
+  const workspace = workspaces[0];
+  if (!workspace) return null;
+
+  const balanceResponse = await restRequest(
+    `credit_accounts?select=balance&workspace_id=eq.${workspace.id}&limit=1`,
+    token,
+  );
+
+  if (!balanceResponse.ok) return null;
+
+  const rows = (await balanceResponse.json()) as Array<{ balance: number }>;
+  return rows[0]?.balance ?? 0;
 }
