@@ -4,25 +4,13 @@ import {
 } from "@tanstack/react-start";
 import { supabaseAdminFetch, supabaseUserFetch } from "./supabase-rest.server";
 
-const HIGGSFIELD_MODEL = "kling-video/v3.0-turbo/text-to-video";
 const YKI_ENGINE_MODEL = "wan2.2-ti2v-5b";
-const HIGGSFIELD_API_BASE = "https://api.higgsfield.ai";
 const CREDITS_PER_SECOND = 4;
 
 const getYkiEngine = createServerOnlyFn(() => ({
   url: process.env.YKI_ENGINE_URL?.replace(/\/$/, "") ?? "",
   apiKey: process.env.YKI_ENGINE_API_KEY ?? "",
 }));
-
-const requireHiggsfield = createServerOnlyFn(() => {
-  const apiKey = process.env.HF_API_KEY;
-
-  if (!apiKey) {
-    throw new Error("Higgsfield API is not configured");
-  }
-
-  return { apiKey };
-});
 
 function getDurationSeconds(value: string) {
   if (value === "5s") return 5;
@@ -36,21 +24,6 @@ function getAspectRatio(format: string) {
   }
 
   return "9:16";
-}
-
-async function higgsfieldRequest(
-  path: string,
-  apiKey: string,
-  init: RequestInit = {},
-) {
-  const headers = new Headers(init.headers);
-  headers.set("Authorization", `Key ${apiKey}`);
-  headers.set("Content-Type", "application/json");
-
-  return fetch(`${HIGGSFIELD_API_BASE}${path}`, {
-    ...init,
-    headers,
-  });
 }
 
 async function refundGeneration(generationId: string, errorCode: string) {
@@ -118,8 +91,12 @@ export const createVideoGeneration = createServerFn({
   const aspectRatio = getAspectRatio(data.format);
   const generateAudio = data.generateAudio !== false;
   const ykiEngine = getYkiEngine();
-  const useYkiEngine = Boolean(ykiEngine.url && ykiEngine.apiKey);
-  const model = useYkiEngine ? YKI_ENGINE_MODEL : HIGGSFIELD_MODEL;
+
+  if (!ykiEngine.url || !ykiEngine.apiKey) {
+    throw new Error("YKI Engine is not configured. External video providers are disabled.");
+  }
+
+  const model = YKI_ENGINE_MODEL;
   const credits = durationSeconds * CREDITS_PER_SECOND;
 
   const workspaceResponse = await supabaseUserFetch(
@@ -273,196 +250,4 @@ export const createVideoGeneration = createServerFn({
     }
   }
 
-  const higgsfield = requireHiggsfield();
-  let providerResponse: Response;
 
-  try {
-    providerResponse = await higgsfieldRequest(
-      "/kling-video/v3.0-turbo/text-to-video",
-      higgsfield.apiKey,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          prompt,
-          duration: durationSeconds,
-          aspect_ratio: aspectRatio,
-          sound: generateAudio ? "on" : "off",
-          cfg_scale: 0.5,
-          multi_shots: false,
-        }),
-      },
-    );
-  } catch (error) {
-    await refundGeneration(
-      generation.generation_id,
-      "HIGGSFIELD_UNREACHABLE",
-    );
-    throw new Error(
-      `Higgsfield API unreachable: ${error instanceof Error ? error.message : "connection failed"}`,
-    );
-  }
-
-  if (!providerResponse.ok) {
-    const errorText = await providerResponse.text();
-    await refundGeneration(generation.generation_id, "HIGGSFIELD_REJECTED");
-    throw new Error(`Higgsfield rejected generation: ${errorText}`);
-  }
-
-  const providerJob = (await providerResponse.json()) as {
-    request_id?: string;
-    status?: string;
-  };
-
-  if (!providerJob.request_id) {
-    await refundGeneration(generation.generation_id, "HIGGSFIELD_NO_REQUEST_ID");
-    throw new Error("Higgsfield returned no request ID");
-  }
-
-  const acceptResponse = await supabaseAdminFetch(
-    "/rest/v1/rpc/system_accept_higgsfield_generation",
-    {
-      method: "POST",
-      body: JSON.stringify({
-        p_generation_id: generation.generation_id,
-        p_provider_job_id: providerJob.request_id,
-        p_model_version: HIGGSFIELD_MODEL,
-      }),
-    },
-  );
-
-  if (!acceptResponse.ok) {
-    await refundGeneration(generation.generation_id, "HIGGSFIELD_ACCEPT_FAILED");
-    throw new Error(
-      `Unable to record Higgsfield request: ${await acceptResponse.text()}`,
-    );
-  }
-
-  return {
-    generationId: generation.generation_id,
-    providerJobId: providerJob.request_id,
-    status: providerJob.status ?? "queued",
-    credits,
-    duplicate: false,
-  };
-});
-
-export const getVideoGenerationStatus = createServerFn({
-  method: "POST",
-}).validator(
-  (data: { accessToken: string; generationId: string }) => data,
-).handler(async ({ data }) => {
-  const response = await supabaseUserFetch(
-    `/rest/v1/generations?select=id,status,provider,provider_job_id,output_url,error_code,credits_reserved,credits_charged,credits_refunded,created_at,completed_at,duration_seconds&id=eq.${encodeURIComponent(data.generationId)}&limit=1`,
-    data.accessToken,
-  );
-
-  if (!response.ok) throw new Error("Unable to read generation status");
-
-  const rows = (await response.json()) as Array<{
-    id: string;
-    status: string;
-    provider: string | null;
-    provider_job_id: string | null;
-    output_url: string | null;
-    error_code: string | null;
-    credits_reserved: number;
-    credits_charged: number;
-    credits_refunded: number;
-    created_at: string;
-    completed_at: string | null;
-    duration_seconds: number;
-  }>;
-
-  const generation = rows[0];
-
-  if (!generation) throw new Error("Generation not found");
-
-  let videoUrl: string | null = null;
-  let providerStatus: string | null = null;
-
-  if (generation.provider === "yki_engine") {
-    providerStatus = generation.status;
-  }
-
-  if (
-    generation.provider === "higgsfield" &&
-    generation.provider_job_id &&
-    generation.status !== "completed" &&
-    generation.status !== "refunded"
-  ) {
-    const higgsfield = requireHiggsfield();
-    const statusResponse = await higgsfieldRequest(
-      `/requests/${encodeURIComponent(generation.provider_job_id)}/status`,
-      higgsfield.apiKey,
-      { method: "GET" },
-    );
-
-    if (!statusResponse.ok) {
-      throw new Error("Unable to read Higgsfield generation status");
-    }
-
-    const providerResult = (await statusResponse.json()) as {
-      status?: string;
-      video?: { url?: string };
-      error?: { code?: string; message?: string } | string;
-    };
-
-    providerStatus = providerResult.status ?? null;
-
-    if (providerResult.status === "completed" && providerResult.video?.url) {
-      videoUrl = providerResult.video.url;
-
-      await completeExternalGeneration(
-        generation.id,
-        generation.provider_job_id,
-        videoUrl,
-        generation.duration_seconds,
-      );
-    } else if (
-      providerResult.status === "failed" ||
-      providerResult.status === "nsfw" ||
-      providerResult.status === "canceled"
-    ) {
-      const providerError =
-        typeof providerResult.error === "string"
-          ? providerResult.error
-          : providerResult.error?.code ??
-            providerResult.error?.message ??
-            providerResult.status;
-
-      await refundGeneration(
-        generation.id,
-        `HIGGSFIELD_${String(providerError).slice(0, 150)}`,
-      );
-    }
-  }
-
-  if (!videoUrl && generation.status === "completed" && generation.output_url) {
-    videoUrl = generation.output_url.startsWith("http")
-      ? generation.output_url
-      : null;
-  }
-
-  const finalResponse = await supabaseUserFetch(
-    `/rest/v1/generations?select=id,status,provider,provider_job_id,output_url,error_code,credits_reserved,credits_charged,credits_refunded,created_at,completed_at,duration_seconds&id=eq.${encodeURIComponent(data.generationId)}&limit=1`,
-    data.accessToken,
-  );
-
-  const finalRows = finalResponse.ok
-    ? ((await finalResponse.json()) as typeof rows)
-    : rows;
-
-  const finalGeneration = finalRows[0] ?? generation;
-
-  if (!videoUrl && finalGeneration.status === "completed" && finalGeneration.output_url) {
-    videoUrl = finalGeneration.output_url.startsWith("http")
-      ? finalGeneration.output_url
-      : null;
-  }
-
-  return {
-    ...finalGeneration,
-    providerStatus,
-    videoUrl,
-  };
-});
