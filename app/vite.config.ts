@@ -49,7 +49,7 @@ export default defineConfig(({ command, mode }) => {
       // both variants bundle their edge build (react-dom's web-streams server,
       // etc.) instead of the Node variant leaning on nodejs_compat shims.
       // `vite dev` SSR runs in Node, where default node resolution is correct.
-      ...(command === "build"
+      ...(command === "build" && !isVercel
         ? {
             target: "webworker" as const,
             resolve: {
