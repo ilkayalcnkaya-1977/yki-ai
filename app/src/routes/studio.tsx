@@ -10,9 +10,13 @@ import {
   Wand2,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createVideoGeneration } from "../lib/video-generation.functions";
-import { getAccessToken, refreshSession } from "../lib/supabase-client";
+import {
+  getAccessToken,
+  getCreditBalance,
+  refreshSession,
+} from "../lib/supabase-client";
 
 export const Route = createFileRoute("/studio")({
   component: Studio,
@@ -28,8 +32,24 @@ function Studio() {
   const [creating, setCreating] = useState(false);
   const [generationId, setGenerationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
 
-  const credits = 32;
+  const credits = duration === "8s" ? 32 : 32;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadBalance = async () => {
+      const balance = await getCreditBalance();
+      if (!cancelled) setCreditBalance(balance);
+    };
+
+    void loadBalance();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleCreate = async () => {
     setError(null);
@@ -50,11 +70,21 @@ function Studio() {
 
     setCreating(true);
 
-    // Refresh the session before generation so Supabase never receives
-    // a stale JWT that can trigger PGRST303 ("JWT issued at future").
     const refreshedSession = await refreshSession();
     if (refreshedSession?.access_token) {
       accessToken = refreshedSession.access_token;
+    }
+
+    const liveBalance = await getCreditBalance(accessToken);
+    if (liveBalance !== null) {
+      setCreditBalance(liveBalance);
+      if (liveBalance < credits) {
+        setCreating(false);
+        setError(
+          `Insufficient credits. You have ${liveBalance} credits; this video needs ${credits}.`,
+        );
+        return;
+      }
     }
 
     try {
@@ -70,8 +100,13 @@ function Studio() {
       });
 
       setGenerationId(result.generationId);
+      const refreshedBalance = await getCreditBalance(accessToken);
+      if (refreshedBalance !== null) setCreditBalance(refreshedBalance);
     } catch (err) {
       console.error(err);
+
+      const refreshedBalance = await getCreditBalance(accessToken);
+      if (refreshedBalance !== null) setCreditBalance(refreshedBalance);
 
       setError(
         err instanceof Error
@@ -94,7 +129,7 @@ function Studio() {
 
         <div className="credit-pill">
           <Zap size={13} />
-          240 credits
+          {creditBalance === null ? "—" : `${creditBalance} credits`}
         </div>
       </header>
 
@@ -256,7 +291,11 @@ function Studio() {
                 className="create-btn"
                 type="button"
                 onClick={handleCreate}
-                disabled={creating || !prompt.trim()}
+                disabled={
+                  creating ||
+                  !prompt.trim() ||
+                  (creditBalance !== null && creditBalance < credits)
+                }
               >
                 <Play size={17} fill="currentColor" />
 
