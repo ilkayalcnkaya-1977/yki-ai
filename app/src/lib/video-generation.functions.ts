@@ -10,7 +10,7 @@ const HIGGSFIELD_API_BASE = "https://api.higgsfield.ai";
 const CREDITS_PER_SECOND = 4;
 
 const getYkiEngine = createServerOnlyFn(() => ({
-  url: process.env.YKI_ENGINE_URL?.replace(/\\/$/, "") ?? "",
+  url: process.env.YKI_ENGINE_URL?.replace(/\/$/, "") ?? "",
   apiKey: process.env.YKI_ENGINE_API_KEY ?? "",
 }));
 
@@ -117,6 +117,9 @@ export const createVideoGeneration = createServerFn({
   const durationSeconds = getDurationSeconds(data.duration);
   const aspectRatio = getAspectRatio(data.format);
   const generateAudio = data.generateAudio !== false;
+  const ykiEngine = getYkiEngine();
+  const useYkiEngine = Boolean(ykiEngine.url && ykiEngine.apiKey);
+  const model = useYkiEngine ? YKI_ENGINE_MODEL : HIGGSFIELD_MODEL;
   const credits = durationSeconds * CREDITS_PER_SECOND;
 
   const workspaceResponse = await supabaseUserFetch(
@@ -164,7 +167,7 @@ export const createVideoGeneration = createServerFn({
         p_project_id: projectId,
         p_prompt: prompt,
         p_credits: credits,
-        p_model: HIGGSFIELD_MODEL,
+        p_model: model,
         p_aspect_ratio: aspectRatio,
         p_duration_seconds: durationSeconds,
         p_idempotency_key: idempotencyKey,
@@ -206,7 +209,7 @@ export const createVideoGeneration = createServerFn({
         p_generation_id: generation.generation_id,
         p_resolution: "720p",
         p_generate_audio: generateAudio,
-        p_model_version: HIGGSFIELD_MODEL,
+        p_model_version: model,
       }),
     },
   );
@@ -221,9 +224,7 @@ export const createVideoGeneration = createServerFn({
     );
   }
 
-  const ykiEngine = getYkiEngine();
-
-  if (ykiEngine.url && ykiEngine.apiKey) {
+  if (useYkiEngine) {
     try {
       const engineResponse = await fetch(\`${ykiEngine.url}/v1/generations\`, {
         method: "POST",
