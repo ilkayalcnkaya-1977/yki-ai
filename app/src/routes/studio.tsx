@@ -24,7 +24,7 @@ export const Route = createFileRoute("/studio")({
 
 function Studio() {
   const [format, setFormat] = useState("9:16");
-  const [duration, setDuration] = useState("8s");
+  const [duration, setDuration] = useState("5s");
   const [prompt, setPrompt] = useState(
     "A street racer drives through a neon Istanbul at midnight. The city suddenly transforms into a futuristic metropolis while the camera races alongside the car."
   );
@@ -36,7 +36,7 @@ function Studio() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [generationStatus, setGenerationStatus] = useState<string | null>(null);
 
-  const credits = duration === "8s" ? 32 : 32;
+  const credits = duration === "5s" ? 20 : 32;
 
   useEffect(() => {
     let cancelled = false;
@@ -328,7 +328,7 @@ function Studio() {
                   <label>MODEL</label>
 
                   <select defaultValue="fast" disabled={creating}>
-                    <option value="fast">Fast Render</option>
+                    <option value="fast">Kling 3.0 Turbo</option>
                     <option value="quality">Quality Render</option>
                   </select>
                 </div>
