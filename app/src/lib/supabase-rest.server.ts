@@ -1,11 +1,17 @@
-const DEFAULT_SUPABASE_PUBLISHABLE_KEY =
-  "sb_publishable_q7sfkEmZcHvt4xTa4DkRPg_GtBkq5DI";
+const SUPABASE_URL = "https://dtdygokcjjoprqfjmmcz.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_q7sfkEmZcHvt4xTa4DkRPg_GtBkq5DI";
+
+const DEFAULT_SUPABASE_URL = SUPABASE_URL;
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY = SUPABASE_PUBLISHABLE_KEY;
 
 function getSupabaseConfig() {
+  // YKI AI has one canonical Supabase project. Keep the public endpoint
+  // aligned with the browser client so a stale/mismatched Vercel env var
+  // cannot route generation requests to another database.
   const url =
     process.env.SUPABASE_URL ??
     process.env.VITE_SUPABASE_URL ??
-    "https://dtdygokcjjoprqfjmmcz.supabase.co";
+    DEFAULT_SUPABASE_URL;
 
   const publishableKey =
     process.env.SUPABASE_PUBLISHABLE_KEY ??
@@ -14,36 +20,31 @@ function getSupabaseConfig() {
 
   const secretKey = process.env.SUPABASE_SECRET_KEY;
 
-  return { url: url.replace(/\/$/, ""), publishableKey, secretKey };
+  return {
+    url: url === DEFAULT_SUPABASE_URL ? DEFAULT_SUPABASE_URL : DEFAULT_SUPABASE_URL,
+    publishableKey:
+      publishableKey === DEFAULT_SUPABASE_PUBLISHABLE_KEY
+        ? DEFAULT_SUPABASE_PUBLISHABLE_KEY
+        : DEFAULT_SUPABASE_PUBLISHABLE_KEY,
+    secretKey,
+  };
 }
 
 function requirePublishableKey() {
-  const { publishableKey } = getSupabaseConfig();
-
-  if (!publishableKey) {
-    throw new Error("SUPABASE_PUBLISHABLE_KEY is not configured");
-  }
-
-  return publishableKey;
+  return getSupabaseConfig().publishableKey;
 }
 
 function requireSecretKey() {
   const { secretKey } = getSupabaseConfig();
-
   if (!secretKey) {
     throw new Error("SUPABASE_SECRET_KEY is not configured");
   }
-
   return secretKey;
 }
 
 export function getUserTokenFromRequest(request: Request) {
   const authorization = request.headers.get("authorization");
-
-  if (!authorization?.startsWith("Bearer ")) {
-    return null;
-  }
-
+  if (!authorization?.startsWith("Bearer ")) return null;
   return authorization.slice(7);
 }
 
@@ -54,7 +55,6 @@ export async function supabaseUserFetch(
 ) {
   const { url } = getSupabaseConfig();
   const headers = new Headers(init.headers);
-
   headers.set("apikey", requirePublishableKey());
   headers.set("Authorization", `Bearer ${token}`);
 
@@ -62,10 +62,6 @@ export async function supabaseUserFetch(
     headers.set("Content-Type", "application/json");
   }
 
-  const requestUrl = `${url}${path}`;
-
-  // Supabase can intermittently reject a fresh authenticated JWT with
-  // PGRST303 ("JWT issued at future"). Retry that transient error.
   const delays = [0, 500, 1000, 2000];
 
   for (let attempt = 0; attempt < delays.length; attempt += 1) {
@@ -75,14 +71,12 @@ export async function supabaseUserFetch(
       );
     }
 
-    const response = await fetch(requestUrl, {
+    const response = await fetch(`${url}${path}`, {
       ...init,
       headers,
     });
 
-    if (response.status !== 401) {
-      return response;
-    }
+    if (response.status !== 401) return response;
 
     const text = await response.text();
     let isJwtTimingError = false;
@@ -130,6 +124,7 @@ export async function supabaseAdminFetch(
   }
 
   return fetch(`${url}${path}`, {
+    ...init,
     ...init,
     headers,
   });
