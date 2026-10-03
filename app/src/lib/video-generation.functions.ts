@@ -5,8 +5,14 @@ import {
 import { supabaseAdminFetch, supabaseUserFetch } from "./supabase-rest.server";
 
 const HIGGSFIELD_MODEL = "kling-video/v3.0-turbo/text-to-video";
+const YKI_ENGINE_MODEL = "wan2.2-ti2v-5b";
 const HIGGSFIELD_API_BASE = "https://api.higgsfield.ai";
 const CREDITS_PER_SECOND = 4;
+
+const getYkiEngine = createServerOnlyFn(() => ({
+  url: process.env.YKI_ENGINE_URL?.replace(/\\/$/, "") ?? "",
+  apiKey: process.env.YKI_ENGINE_API_KEY ?? "",
+}));
 
 const requireHiggsfield = createServerOnlyFn(() => {
   const apiKey = process.env.HF_API_KEY;
@@ -215,6 +221,57 @@ export const createVideoGeneration = createServerFn({
     );
   }
 
+  const ykiEngine = getYkiEngine();
+
+  if (ykiEngine.url && ykiEngine.apiKey) {
+    try {
+      const engineResponse = await fetch(\`${ykiEngine.url}/v1/generations\`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-YKI-Engine-Key": ykiEngine.apiKey,
+        },
+        body: JSON.stringify({
+          generation_id: generation.generation_id,
+          prompt,
+          aspect_ratio: aspectRatio,
+          duration_seconds: durationSeconds,
+          generate_audio: false,
+        }),
+      });
+
+      if (!engineResponse.ok) {
+        const errorText = await engineResponse.text();
+        await refundGeneration(generation.generation_id, "YKI_ENGINE_REJECTED");
+        throw new Error(\`YKI Engine rejected generation: ${errorText}\`);
+      }
+
+      const engineJob = (await engineResponse.json()) as {
+        job_id?: string;
+        status?: string;
+      };
+
+      if (!engineJob.job_id) {
+        await refundGeneration(generation.generation_id, "YKI_ENGINE_NO_JOB_ID");
+        throw new Error("YKI Engine returned no job ID");
+      }
+
+      return {
+        generationId: generation.generation_id,
+        providerJobId: engineJob.job_id,
+        status: engineJob.status ?? "starting",
+        credits,
+        duplicate: false,
+      };
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("YKI Engine")) throw error;
+      await refundGeneration(generation.generation_id, "YKI_ENGINE_UNREACHABLE");
+      throw new Error(
+        \`YKI Engine unreachable: ${error instanceof Error ? error.message : "connection failed"}\`,
+      );
+    }
+  }
+
   const higgsfield = requireHiggsfield();
   let providerResponse: Response;
 
@@ -321,6 +378,10 @@ export const getVideoGenerationStatus = createServerFn({
 
   let videoUrl: string | null = null;
   let providerStatus: string | null = null;
+
+  if (generation.provider === "yki_engine") {
+    providerStatus = generation.status;
+  }
 
   if (
     generation.provider === "higgsfield" &&
