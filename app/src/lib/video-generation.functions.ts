@@ -13,14 +13,18 @@ const MODEL = "google/veo-3.1-fast";
 // MVP: 4 kredi / saniye
 const CREDITS_PER_SECOND = 4;
 
-const requireReplicateToken = createServerOnlyFn(() => {
-  const token = process.env.REPLICATE_API_TOKEN;
+const requireReplicateTokens = createServerOnlyFn(() => {
+  const tokens = [
+    process.env.REPLICATE_API_TOKEN,
+    process.env.REPLICATE_API_TOKEN_2,
+    process.env.REPLICATE_API_TOKEN_3,
+  ].filter((token): token is string => Boolean(token));
 
-  if (!token) {
-    throw new Error("REPLICATE_API_TOKEN is not configured");
+  if (tokens.length === 0) {
+    throw new Error("No Replicate API token is configured");
   }
 
-  return token;
+  return tokens;
 });
 
 const requireWebhookUrl = createServerOnlyFn(() => {
@@ -77,7 +81,7 @@ export const createVideoGeneration = createServerFn({
 
   // Validate provider configuration before creating a project or reserving
   // credits. A missing production secret must not leave a charged generation.
-  const replicateToken = requireReplicateToken();
+  const replicateTokens = requireReplicateTokens();
   const webhookUrl = requireWebhookUrl();
 
   const durationSeconds = getDurationSeconds(data.duration);
@@ -239,39 +243,77 @@ export const createVideoGeneration = createServerFn({
   /*
    * 5. Replicate üzerinde gerçek video üretimini başlat
    */
-  const replicateResponse = await fetch(
-    REPLICATE_API_URL,
-    {
-      method: "POST",
+  let replicateResponse: Response | null = null;
+  let lastProviderError = "";
 
-      headers: {
-        Authorization: `Bearer ${replicateToken}`,
-        "Content-Type": "application/json",
-        Prefer: "respond-async",
-      },
+  // Provider hesabının kredisi biterse diğer yapılandırılmış tokenı dene.
+  // Böylece tek bir Replicate hesabının 402 hatası tüm üretimleri kilitlemez.
+  for (const token of replicateTokens) {
+    const response = await fetch(
+      REPLICATE_API_URL,
+      {
+        method: "POST",
 
-      body: JSON.stringify({
-        input: {
-          prompt,
-          aspect_ratio: data.format,
-          duration: durationSeconds,
-          resolution,
-          generate_audio: generateAudio,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Prefer: "respond-async",
         },
 
-        webhook: webhookUrl,
+        body: JSON.stringify({
+          input: {
+            prompt,
+            aspect_ratio: data.format,
+            duration: durationSeconds,
+            resolution,
+            generate_audio: generateAudio,
+          },
 
-        webhook_events_filter: [
-          "completed",
-        ],
-      }),
-    },
-  );
+          webhook: webhookUrl,
 
-  if (!replicateResponse.ok) {
-    const errorText =
-      await replicateResponse.text();
+          webhook_events_filter: [
+            "completed",
+          ],
+        }),
+      },
+    );
 
+    if (response.ok) {
+      replicateResponse = response;
+      break;
+    }
+
+    const errorText = await response.text();
+    lastProviderError = errorText;
+
+    let isInsufficientCredit = false;
+
+    try {
+      const payload = JSON.parse(errorText) as {
+        title?: string;
+        detail?: string;
+        status?: number;
+      };
+
+      isInsufficientCredit =
+        response.status === 402 ||
+        payload.status === 402 ||
+        payload.title?.toLowerCase().includes("insufficient credit") === true ||
+        payload.detail?.toLowerCase().includes("insufficient credit") === true;
+    } catch {
+      isInsufficientCredit =
+        response.status === 402 ||
+        errorText.toLowerCase().includes("insufficient credit");
+    }
+
+    // Sadece sağlayıcı bakiyesi hatasında sıradaki hesabı dene.
+    // Token/auth/config hatalarında yanlış hesabı sessizce kullanma.
+    if (!isInsufficientCredit) {
+      break;
+    }
+  }
+
+  if (!replicateResponse) {
     await supabaseUserFetch(
       "/rest/v1/rpc/refund_generation",
       data.accessToken,
@@ -283,10 +325,10 @@ export const createVideoGeneration = createServerFn({
       },
     );
 
-    let providerMessage = errorText;
+    let providerMessage = lastProviderError;
 
     try {
-      const payload = JSON.parse(errorText) as {
+      const payload = JSON.parse(lastProviderError) as {
         title?: string;
         detail?: string;
         status?: number;
@@ -298,12 +340,12 @@ export const createVideoGeneration = createServerFn({
         payload.detail?.toLowerCase().includes("insufficient credit")
       ) {
         providerMessage =
-          "Replicate hesabında sağlayıcı kredisi yok. YKI AI krediniz geri iade edildi. Replicate Billing'den sağlayıcı bakiyesini yükledikten sonra tekrar deneyin.";
+          "Video sağlayıcı hesaplarının kredisi yetersiz. YKI AI krediniz geri iade edildi.";
       }
     } catch {
-      if (errorText.toLowerCase().includes("insufficient credit")) {
+      if (lastProviderError.toLowerCase().includes("insufficient credit")) {
         providerMessage =
-          "Replicate hesabında sağlayıcı kredisi yok. YKI AI krediniz geri iade edildi. Replicate Billing'den sağlayıcı bakiyesini yükledikten sonra tekrar deneyin.";
+          "Video sağlayıcı hesaplarının kredisi yetersiz. YKI AI krediniz geri iade edildi.";
       }
     }
 
