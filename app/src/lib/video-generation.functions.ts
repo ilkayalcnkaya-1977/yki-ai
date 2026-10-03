@@ -2,7 +2,7 @@ import {
   createServerFn,
   createServerOnlyFn,
 } from "@tanstack/react-start";
-import { supabaseUserFetch } from "./supabase-rest.server";
+import { supabaseAdminFetch, supabaseUserFetch } from "./supabase-rest.server";
 
 const REPLICATE_API_URL =
   "https://api.replicate.com/v1/models/google/veo-3.1-fast/predictions";
@@ -403,5 +403,65 @@ export const createVideoGeneration = createServerFn({
     credits,
 
     duplicate: false,
+  };
+});
+
+
+export const getVideoGenerationStatus = createServerFn({
+  method: "POST",
+}).validator(
+  (data: { accessToken: string; generationId: string }) => data,
+).handler(async ({ data }) => {
+  const response = await supabaseUserFetch(
+    `/rest/v1/generations?select=id,status,output_url,error_code,credits_reserved,credits_charged,credits_refunded,created_at,completed_at&id=eq.${encodeURIComponent(data.generationId)}&limit=1`,
+    data.accessToken,
+  );
+
+  if (!response.ok) {
+    throw new Error("Unable to read generation status");
+  }
+
+  const rows = (await response.json()) as Array<{
+    id: string;
+    status: string;
+    output_url: string | null;
+    error_code: string | null;
+    credits_reserved: number;
+    credits_charged: number;
+    credits_refunded: number;
+    created_at: string;
+    completed_at: string | null;
+  }>;
+
+  const generation = rows[0];
+
+  if (!generation) {
+    throw new Error("Generation not found");
+  }
+
+  let videoUrl: string | null = null;
+
+  if (generation.status === "completed" && generation.output_url) {
+    const signResponse = await supabaseAdminFetch(
+      `/storage/v1/object/sign/yki-media/${generation.output_url.replace(/^\/+/, "").split("/").map(encodeURIComponent).join("/")}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ expiresIn: 3600 }),
+      },
+    );
+
+    if (signResponse.ok) {
+      const signed = (await signResponse.json()) as { signedURL?: string };
+      if (signed.signedURL) {
+        videoUrl = signed.signedURL.startsWith("http")
+          ? signed.signedURL
+          : `${"https://dtdygokcjjoprqfjmmcz.supabase.co"}${signed.signedURL}`;
+      }
+    }
+  }
+
+  return {
+    ...generation,
+    videoUrl,
   };
 });
