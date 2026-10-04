@@ -22,8 +22,8 @@ import appMetaJson from "../app-meta.json";
 declare const __HF_DESIGN_INSPECTOR__: boolean;
 
 // Built-in defaults for any field that isn't set in app-meta.json.
-const DEFAULT_TITLE = "Higgsfield App";
-const DEFAULT_DESCRIPTION = "Higgsfield Generated Project";
+const DEFAULT_TITLE = "YKI AI — AI Creative Studio";
+const DEFAULT_DESCRIPTION = "YKI AI — create cinematic AI videos, images and short-form content.";
 
 type AppMeta = {
   og_title?: string | null;
@@ -81,12 +81,12 @@ function buildHead(meta: AppMeta) {
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title },
       { name: "description", content: description },
-      { name: "author", content: "Higgsfield" },
+      { name: "author", content: "YKI AI" },
       { property: "og:title", content: title },
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: ogImage ? "summary_large_image" : "summary" },
-      { name: "twitter:site", content: "@Higgsfield" },
+      { name: "twitter:site", content: "@YKI_AI" },
       ...(ogImage
         ? [
             { property: "og:image", content: ogImage },
