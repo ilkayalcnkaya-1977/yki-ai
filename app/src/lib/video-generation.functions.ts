@@ -32,14 +32,14 @@ async function refundGeneration(generationId: string, errorCode: string) {
 
 async function setProviderJob(generationId: string, provider: "yki_engine" | "runpod", jobId: string) {
   const response = await supabaseAdminFetch(
-    `/rest/v1/generations?id=eq.\${encodeURIComponent(generationId)}`,
+    `/rest/v1/generations?id=eq.${encodeURIComponent(generationId)}`,
     {
       method: "PATCH",
       headers: { Prefer: "return=minimal" },
       body: JSON.stringify({ provider, provider_job_id: jobId, model: YKI_ENGINE_MODEL, model_version: YKI_ENGINE_MODEL }),
     },
   );
-  if (!response.ok) throw new Error(`Unable to record provider job: \${await response.text()}`);
+  if (!response.ok) throw new Error(`Unable to record provider job: ${await response.text()}`);
 }
 
 async function completeExternalGeneration(generationId: string, providerRequestId: string, videoUrl: string, durationSeconds: number) {
@@ -53,7 +53,7 @@ async function completeExternalGeneration(generationId: string, providerRequestI
       p_provider_cost_usd: 0,
     }),
   });
-  if (!response.ok) throw new Error(`Unable to finalize generation: \${await response.text()}`);
+  if (!response.ok) throw new Error(`Unable to finalize generation: ${await response.text()}`);
 }
 
 function extractRunpodVideoUrl(output: unknown): string | null {
@@ -68,20 +68,20 @@ function extractRunpodVideoUrl(output: unknown): string | null {
 
 async function runpodRequest(endpointId: string, apiKey: string, input: Record<string, unknown>) {
   const response = await fetch(
-    `https://api.runpod.ai/v2/\${encodeURIComponent(endpointId)}/run`,
+    `https://api.runpod.ai/v2/${encodeURIComponent(endpointId)}/run`,
     {
       method: "POST",
       headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
       body: JSON.stringify({ input }),
     },
   );
-  if (!response.ok) throw new Error(`RunPod rejected generation: \${await response.text()}`);
+  if (!response.ok) throw new Error(`RunPod rejected generation: ${await response.text()}`);
   return (await response.json()) as { id?: string; status?: string };
 }
 
 async function getRunpodStatus(endpointId: string, apiKey: string, jobId: string) {
   const response = await fetch(
-    `https://api.runpod.ai/v2/\${encodeURIComponent(endpointId)}/status/\${encodeURIComponent(jobId)}`,
+    `https://api.runpod.ai/v2/${encodeURIComponent(endpointId)}/status/${encodeURIComponent(jobId)}`,
     { headers: { Authorization: "Bearer " + apiKey } },
   );
   if (!response.ok) throw new Error("Unable to read RunPod generation status");
@@ -110,7 +110,7 @@ export const createVideoGeneration = createServerFn({ method: "POST" })
 
     const credits = durationSeconds * CREDITS_PER_SECOND;
     const workspaceResponse = await supabaseUserFetch("/rest/v1/workspaces?select=id&limit=1", data.accessToken);
-    if (!workspaceResponse.ok) throw new Error(`Unable to load workspace: \${await workspaceResponse.text()}`);
+    if (!workspaceResponse.ok) throw new Error(`Unable to load workspace: ${await workspaceResponse.text()}`);
     const workspaces = (await workspaceResponse.json()) as Array<{ id: string }>;
     const workspace = workspaces[0];
     if (!workspace) throw new Error("No workspace found for this account");
@@ -124,7 +124,7 @@ export const createVideoGeneration = createServerFn({ method: "POST" })
         p_duration_seconds: durationSeconds,
       }),
     });
-    if (!projectResponse.ok) throw new Error(`Unable to create project: \${await projectResponse.text()}`);
+    if (!projectResponse.ok) throw new Error(`Unable to create project: ${await projectResponse.text()}`);
 
     const projectId = (await projectResponse.json()) as string;
     const idempotencyKey = crypto.randomUUID();
@@ -141,7 +141,7 @@ export const createVideoGeneration = createServerFn({ method: "POST" })
         p_idempotency_key: idempotencyKey,
       }),
     });
-    if (!reserveResponse.ok) throw new Error(`Credit reservation failed: \${await reserveResponse.text()}`);
+    if (!reserveResponse.ok) throw new Error(`Credit reservation failed: ${await reserveResponse.text()}`);
 
     const reservation = (await reserveResponse.json()) as Array<{ generation_id: string; status: string; duplicate: boolean }>;
     const generation = reservation[0];
@@ -159,7 +159,7 @@ export const createVideoGeneration = createServerFn({ method: "POST" })
     });
     if (!optionsResponse.ok) {
       await refundGeneration(generation.generation_id, "GENERATION_SETUP_FAILED");
-      throw new Error(`Generation setup failed: \${await optionsResponse.text()}`);
+      throw new Error(`Generation setup failed: ${await optionsResponse.text()}`);
     }
 
     try {
@@ -169,7 +169,7 @@ export const createVideoGeneration = createServerFn({ method: "POST" })
 
       if (useEngine) {
         provider = "yki_engine";
-        const engineResponse = await fetch(`\${config.engineUrl}/v1/generations`, {
+        const engineResponse = await fetch(`${config.engineUrl}/v1/generations`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "X-YKI-Engine-Key": config.engineKey },
           body: JSON.stringify({
@@ -181,7 +181,7 @@ export const createVideoGeneration = createServerFn({ method: "POST" })
             generate_audio: false,
           }),
         });
-        if (!engineResponse.ok) throw new Error(`YKI Engine rejected generation: \${await engineResponse.text()}`);
+        if (!engineResponse.ok) throw new Error(`YKI Engine rejected generation: ${await engineResponse.text()}`);
         const engineJob = (await engineResponse.json()) as { job_id?: string; status?: string };
         jobId = engineJob.job_id;
         status = engineJob.status ?? "starting";
@@ -214,7 +214,7 @@ export const getVideoGenerationStatus = createServerFn({ method: "POST" })
   .validator((data: { accessToken: string; generationId: string }) => data)
   .handler(async ({ data }) => {
     const response = await supabaseUserFetch(
-      `/rest/v1/generations?select=id,status,provider,provider_job_id,output_url,error_code,credits_reserved,credits_charged,credits_refunded,created_at,completed_at,duration_seconds&id=eq.\${encodeURIComponent(data.generationId)}&limit=1`,
+      `/rest/v1/generations?select=id,status,provider,provider_job_id,output_url,error_code,credits_reserved,credits_charged,credits_refunded,created_at,completed_at,duration_seconds&id=eq.${encodeURIComponent(data.generationId)}&limit=1`,
       data.accessToken,
     );
     if (!response.ok) throw new Error("Unable to read generation status");
@@ -247,12 +247,12 @@ export const getVideoGenerationStatus = createServerFn({ method: "POST" })
           await completeExternalGeneration(generation.id, generation.provider_job_id, videoUrl, generation.duration_seconds);
         }
       } else if (["FAILED", "CANCELLED", "TIMED_OUT"].includes(normalized)) {
-        await refundGeneration(generation.id, `RUNPOD_\${normalized}`);
+        await refundGeneration(generation.id, `RUNPOD_${normalized}`);
       }
     }
 
     const finalResponse = await supabaseUserFetch(
-      `/rest/v1/generations?select=id,status,provider,provider_job_id,output_url,error_code,credits_reserved,credits_charged,credits_refunded,created_at,completed_at,duration_seconds&id=eq.\${encodeURIComponent(data.generationId)}&limit=1`,
+      `/rest/v1/generations?select=id,status,provider,provider_job_id,output_url,error_code,credits_reserved,credits_charged,credits_refunded,created_at,completed_at,duration_seconds&id=eq.${encodeURIComponent(data.generationId)}&limit=1`,
       data.accessToken,
     );
     const finalRows = finalResponse.ok ? ((await finalResponse.json()) as typeof rows) : rows;
