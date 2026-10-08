@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${WAN_MODEL_PATH:=/models/Wan2.2-TI2V-5B}"
+: "${WAN_MODEL_PATH:=/workspace/models/Wan2.2-TI2V-5B}"
 : "${YKI_ENGINE_PORT:=8080}"
 
 mkdir -p "${WAN_MODEL_PATH}"
