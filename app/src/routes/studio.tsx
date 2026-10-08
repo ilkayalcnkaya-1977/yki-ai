@@ -328,8 +328,8 @@ function Studio() {
                   <label>MODEL</label>
 
                   <select defaultValue="fast" disabled={creating}>
-                    <option value="fast">Kling 3.0 Turbo</option>
-                    <option value="quality">Quality Render</option>
+                    <option value="fast">YKI Engine · Wan2.2</option>
+                    <option value="quality">YKI Engine · Quality</option>
                   </select>
                 </div>
               </div>
