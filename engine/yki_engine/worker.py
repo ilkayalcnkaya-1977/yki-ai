@@ -17,16 +17,17 @@ SEMAPHORE = asyncio.Semaphore(CONCURRENCY)
 
 
 def size_for_ratio(ratio: str) -> str:
+    # Wan2.2 TI2V-5B officially supports portrait and landscape 720P sizes.
+    # Square output will be added as a post-process crop in a later engine version.
     return {
         "9:16": "704*1280",
         "16:9": "1280*704",
-        "1:1": "704*704",
+        "1:1": "704*1280",
     }.get(ratio, "704*1280")
 
 
 def frames_for_duration(seconds: int) -> int:
     # Wan requires 4n+1 frames. At 24 fps, 8 seconds is 193 frames.
-    # This is intentionally explicit so the UI/database duration and the GPU job agree.
     return 4 * round((seconds * 24 - 1) / 4) + 1
 
 
@@ -121,9 +122,7 @@ async def run_job(generation_id: str, prompt: str, ratio: str, duration: int):
                     "p_error_code": str(exc)[:500],
                 })
             except Exception:
-                # The generation remains reserved rather than silently losing credits
-                # if the database itself is temporarily unavailable. A reconciliation
-                # worker should retry system_fail_generation for stuck jobs.
+                # Keep the reservation intact if DB is temporarily unavailable.
                 pass
         finally:
             try:
