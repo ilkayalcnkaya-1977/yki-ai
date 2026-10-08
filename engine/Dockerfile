@@ -5,16 +5,17 @@ ENV PYTHONUNBUFFERED=1
 ENV PIP_NO_CACHE_DIR=1
 
 RUN apt-get update && apt-get install -y \
-    python3 python3-pip git ffmpeg curl \
+    python3 python3-pip git ffmpeg curl build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/yki-engine
 
-# Install the upstream Wan repository and its dependencies.
+# flash-attn build metadata needs packaging before Wan dependencies are resolved.
+RUN python3 -m pip install --upgrade pip setuptools wheel packaging
+
 RUN git clone --depth 1 https://github.com/Wan-Video/Wan2.2.git /opt/wan
 RUN pip3 install -r /opt/wan/requirements.txt
 
-# Install YKI Engine dependencies before copying application code.
 COPY requirements.txt /opt/yki-engine/requirements.txt
 RUN pip3 install -r /opt/yki-engine/requirements.txt
 
