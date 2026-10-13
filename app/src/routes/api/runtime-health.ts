@@ -13,14 +13,28 @@ export const Route = createFileRoute("/api/runtime-health")({
               process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           ),
           supabaseSecretKey: Boolean(process.env.SUPABASE_SECRET_KEY),
-          replicateApiToken: Boolean(process.env.REPLICATE_API_TOKEN),
-          replicateWebhookUrl: Boolean(process.env.REPLICATE_WEBHOOK_URL),
+          ykiEngineConfigured: Boolean(
+            process.env.YKI_ENGINE_URL && process.env.YKI_ENGINE_API_KEY,
+          ),
+          runpodFallbackConfigured: Boolean(
+            process.env.RUNPOD_API_KEY && process.env.RUNPOD_ENDPOINT_ID,
+          ),
         };
+
+        const generationProviderConfigured =
+          checks.ykiEngineConfigured || checks.runpodFallbackConfigured;
 
         return Response.json(
           {
-            ok: Object.values(checks).every(Boolean),
-            checks,
+            ok:
+              checks.supabaseUrl &&
+              checks.supabasePublishableKey &&
+              checks.supabaseSecretKey &&
+              generationProviderConfigured,
+            checks: {
+              ...checks,
+              generationProviderConfigured,
+            },
             deployment: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
           },
           {
