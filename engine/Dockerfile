@@ -30,4 +30,6 @@ COPY runpod /opt/yki-engine/runpod
 
 EXPOSE 8080
 
-CMD ["python3", "-m", "yki_engine"]
+# Run the startup script so model weights are downloaded to the persistent volume
+# before the API server starts. Starting Python directly skips this essential step.
+CMD ["bash", "/opt/yki-engine/runpod/start.sh"]
