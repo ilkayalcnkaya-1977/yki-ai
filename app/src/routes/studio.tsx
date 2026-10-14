@@ -183,10 +183,14 @@ function Studio() {
 
         <div className="studio-nav-center">CREATE / STUDIO</div>
 
-        <div className="credit-pill">
+        <a
+          href={creditBalance === null ? "/login" : "/credits"}
+          className="credit-pill"
+          aria-label={creditBalance === null ? "Sign in to check credits" : "Open credits"}
+        >
           <Zap size={13} />
-          {creditBalance === null ? "—" : `${creditBalance} credits`}
-        </div>
+          {creditBalance === null ? "Sign in" : `${creditBalance} credits`}
+        </a>
       </header>
 
       <div className="studio-shell">
