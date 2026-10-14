@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowUpRight, FolderOpen, Play, Plus, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
-import { listProjects } from "../lib/video-generation.server";
+import { listProjects } from "../lib/video-generation.functions";
 import { getAccessToken } from "../lib/supabase-client";
 export const Route = createFileRoute("/projects")({ component: Projects });
 type Project = { id: string; title: string; created_at: string; aspect_ratio: string; duration_seconds: number; generations: Array<{ id: string; status: string; output_url: string | null }> };
