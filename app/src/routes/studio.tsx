@@ -11,7 +11,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { createVideoGeneration, enhancePrompt, getGeneration, getStudioState } from "../lib/video-generation.server";
+import { createVideoGeneration, enhancePrompt, getGeneration, getStudioState } from "../lib/video-generation.functions";
 import { getAccessToken } from "../lib/supabase-client";
 
 export const Route = createFileRoute("/studio")({
