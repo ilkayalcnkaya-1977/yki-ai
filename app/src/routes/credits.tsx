@@ -1,7 +1,46 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Zap } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getStudioState } from "../lib/video-generation.functions";
+import { getCreditsState } from "../lib/credits.functions";
 import { getAccessToken } from "../lib/supabase-client";
+
 export const Route = createFileRoute("/credits")({ component: Credits });
-function Credits(){ const [credits,setCredits]=useState<number|null>(null); const [error,setError]=useState(""); useEffect(()=>{const token=getAccessToken();if(!token){window.location.assign("/login");return;}getStudioState({data:{accessToken:token}}).then(s=>setCredits(s.credits)).catch(()=>setError("Credit balance could not be loaded."));},[]);return <main className="credits-page"><header className="studio-nav"><a href="/" className="ykiai-logo">YKI AI<span>®</span></a><div className="studio-nav-center">CREDITS</div><div className="credit-pill"><Zap size={13}/>{credits===null?"…":`${credits} credits`}</div></header><section className="credits-main"><p className="ykiai-eyebrow"><Zap size={13}/> YOUR BALANCE</p><h1>{credits===null?"Loading…":`${credits} credits`}<br/><span>available.</span></h1><p className="credits-lede">Video cost is calculated on the server before a generation is reserved. Credit purchases are not configured in this deployment yet.</p>{error&&<p>{error}</p>}<a className="create-btn" href="/studio">Create a video</a></section></main>}
+
+function Credits() {
+  const [credits, setCredits] = useState<number | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const token = getAccessToken();
+    if (!token) {
+      window.location.assign("/login");
+      return;
+    }
+    getCreditsState({ data: { accessToken: token } })
+      .then((state) => setCredits(state.credits))
+      .catch(() => setError("Credit balance could not be loaded."));
+  }, []);
+
+  return (
+    <main className="credits-page">
+      <header className="studio-nav">
+        <a href="/" className="ykiai-logo">YKI AI<span>®</span></a>
+        <div className="studio-nav-center">CREDITS</div>
+        <div className="credit-pill">
+          <Zap size={13} />
+          {credits === null ? "…" : `${credits} credits`}
+        </div>
+      </header>
+      <section className="credits-main">
+        <p className="ykiai-eyebrow"><Zap size={13} /> YOUR BALANCE</p>
+        <h1>{credits === null ? "Loading…" : `${credits} credits`}<br /><span>available.</span></h1>
+        <p className="credits-lede">
+          Video cost is calculated on the server before a generation is reserved.
+          Credit purchases are not configured in this deployment yet.
+        </p>
+        {error && <p>{error}</p>}
+        <a className="create-btn" href="/studio">Create a video</a>
+      </section>
+    </main>
+  );
+}
