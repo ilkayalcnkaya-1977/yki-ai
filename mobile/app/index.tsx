@@ -1,83 +1,165 @@
+import { useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView, ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 
-const features = [
-  { icon: "✦", title: "Metinden videoya", description: "Fikrini yaz, video üretim akışını başlat." },
-  { icon: "▧", title: "Projelerim", description: "Ürettiğin videoları ve çalışmalarını takip et." },
-  { icon: "◈", title: "Kredi bakiyesi", description: "Hesabındaki kullanılabilir kredileri görüntüle." },
+const tools = [
+  { icon: "▧", title: "Fotoğraftan Video", subtitle: "Fotoğrafını hareketlendir.", colors: ["#34204b", "#171923"] },
+  { icon: "T▶", title: "Metinden Video", subtitle: "Hayalindeki sahneyi yaz.", colors: ["#24203f", "#141721"] },
+  { icon: "✦", title: "AI Fotoğraf", subtitle: "Eşsiz görseller oluştur.", colors: ["#3c2348", "#171923"] },
+  { icon: "▶", title: "Video Efektleri", subtitle: "Tarzını bir üst seviyeye taşı.", colors: ["#1e2944", "#151720"] },
+];
+
+const popular = [
+  { emoji: "🌉", title: "İstanbul'da sinema", subtitle: "Sinematik sahne" },
+  { emoji: "🌑", title: "Gizemli karakter", subtitle: "Portre ve atmosfer" },
+  { emoji: "🏎️", title: "Gece sürüşü", subtitle: "Otomotiv klibi" },
+];
+
+const tabs = [
+  { icon: "⌂", label: "Keşfet" },
+  { icon: "＋", label: "Oluştur" },
+  { icon: "▣", label: "Projelerim" },
+  { icon: "○", label: "Profil" },
 ];
 
 export default function HomeScreen() {
+  const [activeTab, setActiveTab] = useState("Keşfet");
+  const [notice, setNotice] = useState("");
+
+  const selectTool = (title: string) => {
+    setActiveTab("Oluştur");
+    setNotice(title + " seçildi. Üretim servisi bağlantısı tamamlandığında burada kullanıma açılacak.");
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar style="light" />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <View style={styles.logo}><Text style={styles.logoText}>Y</Text></View>
+          <View style={styles.brandMark}><Text style={styles.markText}>✦</Text></View>
           <View style={styles.brand}>
-            <Text style={styles.wordmark}>YKIA AI</Text>
-            <Text style={styles.tagline}>YARATICILIĞINI HAREKETE GEÇİR</Text>
+            <Text style={styles.wordmark}>YKIA <Text style={styles.ai}>AI</Text></Text>
+            <Text style={styles.tagline}>HAYAL ET. ÜRET.</Text>
           </View>
-          <View style={styles.avatar}><Text style={styles.avatarText}>☺</Text></View>
+          <Pressable style={styles.credits} onPress={() => setNotice("Kredi bakiyesi ve paketler backend bağlantısından sonra gösterilecek.")}>
+            <Text style={styles.bolt}>ϟ</Text><Text style={styles.creditText}>Krediler</Text><Text style={styles.plus}>＋</Text>
+          </Pressable>
         </View>
 
-        <View style={styles.hero}>
-          <Text style={styles.eyebrow}>YENİ NESİL YARATICI STÜDYO</Text>
-          <Text style={styles.headline}>Hayal et.{ "\n" }Videoya dönüştür.</Text>
-          <Text style={styles.subtitle}>Fikrini yaz ve yapay zekâ destekli video üretim yolculuğuna başla.</Text>
-          <Pressable style={styles.primaryButton} accessibilityRole="button" onPress={() => {}}>
-            <Text style={styles.primaryButtonText}>Video oluşturmaya başla  →</Text>
-          </Pressable>
-          <Text style={styles.note}>Önizleme • Üretim servisi bağlantısı henüz etkin değil</Text>
+        <Text style={styles.headline}>Hayal et. <Text style={styles.gradientText}>Üret.</Text></Text>
+        <Text style={styles.subtitle}>Fotoğraf ve videolarını yapay zekâyla oluştur.</Text>
+
+        <Pressable style={styles.hero} onPress={() => selectTool("Sinematik Sahne")}>
+          <View style={styles.heroGlow} />
+          <View style={styles.heroTop}><Text style={styles.heroTag}>✦ ÖNE ÇIKAN EFEKT</Text><Text style={styles.popularBadge}>🔥 Popüler</Text></View>
+          <Text style={styles.heroEmoji}>🌃 🚘</Text>
+          <Text style={styles.heroTitle}>Sinematik Sahne</Text>
+          <Text style={styles.heroDescription}>Fotoğraflarını etkileyici videolara dönüştür.</Text>
+          <View style={styles.heroButton}><Text style={styles.heroButtonText}>Hemen dene  →</Text></View>
+        </Pressable>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Yaratıcı araçlar</Text>
+          <Text style={styles.sectionHint}>HER ŞEY TEK YERDE</Text>
+        </View>
+        <View style={styles.toolGrid}>
+          {tools.map((tool) => (
+            <Pressable key={tool.title} style={styles.toolCard} onPress={() => selectTool(tool.title)}>
+              <View style={styles.toolArt}><Text style={styles.toolEmoji}>{tool.icon}</Text><Text style={styles.artSpark}>✦</Text></View>
+              <Text style={styles.toolTitle}>{tool.title}</Text>
+              <Text style={styles.toolSubtitle}>{tool.subtitle}</Text>
+              <Text style={styles.toolArrow}>›</Text>
+            </Pressable>
+          ))}
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Stüdyon</Text>
-          <Text style={styles.sectionHint}>HER ŞEY TEK YERDE</Text>
+          <Text style={styles.sectionTitle}>Popüler fikirler</Text>
+          <Pressable onPress={() => setNotice("Popüler şablonların tamamı yakında burada.")}><Text style={styles.seeAll}>Tümünü gör  →</Text></Pressable>
         </View>
-        {features.map((feature) => (
-          <Pressable key={feature.title} style={styles.feature} accessibilityRole="button">
-            <View style={styles.featureIcon}><Text style={styles.featureIconText}>{feature.icon}</Text></View>
-            <View style={styles.featureCopy}>
-              <Text style={styles.featureTitle}>{feature.title}</Text>
-              <Text style={styles.featureDescription}>{feature.description}</Text>
-            </View>
-            <Text style={styles.chevron}>›</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.popularRow}>
+          {popular.map((item) => (
+            <Pressable key={item.title} style={styles.popularCard} onPress={() => selectTool(item.title)}>
+              <View style={styles.popularArt}><Text style={styles.popularEmoji}>{item.emoji}</Text></View>
+              <Text style={styles.popularTitle}>{item.title}</Text>
+              <Text style={styles.popularSubtitle}>{item.subtitle}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+
+        {notice ? (
+          <Pressable style={styles.notice} onPress={() => setNotice("")}>
+            <Text style={styles.noticeText}>{notice}</Text><Text style={styles.dismiss}>Kapat ×</Text>
+          </Pressable>
+        ) : null}
+        <Text style={styles.footer}>YKIA AI • Yaratıcılığın sınırlarını genişlet.</Text>
+      </ScrollView>
+      <View style={styles.tabBar}>
+        {tabs.map((tab) => (
+          <Pressable key={tab.label} style={styles.tab} onPress={() => { setActiveTab(tab.label); if (tab.label !== "Keşfet") setNotice(tab.label + " bölümü için ekranı sıradaki adımda geliştireceğiz."); }}>
+            <Text style={[styles.tabIcon, activeTab === tab.label && styles.tabActive]}>{tab.icon}</Text>
+            <Text style={[styles.tabLabel, activeTab === tab.label && styles.tabActive]}>{tab.label}</Text>
+            {activeTab === tab.label ? <View style={styles.activeDot} /> : null}
           </Pressable>
         ))}
-        <Text style={styles.footer}>YKIA AI  •  Yaratıcılığın sınırlarını genişlet.</Text>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#090a0d" },
-  content: { padding: 22, paddingBottom: 40 },
-  header: { flexDirection: "row", alignItems: "center", marginBottom: 28 },
-  logo: { width: 42, height: 42, borderRadius: 13, backgroundColor: "#d7ff64", alignItems: "center", justifyContent: "center" },
-  logoText: { color: "#10120a", fontSize: 25, fontWeight: "900" },
-  brand: { marginLeft: 11, flex: 1 },
-  wordmark: { color: "#f5f5f5", fontSize: 18, fontWeight: "800", letterSpacing: 1.4 },
-  tagline: { color: "#8d909a", fontSize: 8, letterSpacing: 1.2, marginTop: 3 },
-  avatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: "#1c1e25", alignItems: "center", justifyContent: "center" },
-  avatarText: { color: "#f6f6f6", fontSize: 19 },
-  hero: { backgroundColor: "#15171d", borderColor: "#292c35", borderWidth: 1, borderRadius: 26, padding: 22, marginBottom: 30 },
-  eyebrow: { color: "#d7ff64", fontSize: 10, fontWeight: "800", letterSpacing: 1.6, marginBottom: 17 },
-  headline: { color: "#ffffff", fontSize: 36, fontWeight: "800", lineHeight: 42, letterSpacing: -1 },
-  subtitle: { color: "#a9abb4", fontSize: 14, lineHeight: 22, marginTop: 14 },
-  primaryButton: { backgroundColor: "#d7ff64", borderRadius: 14, paddingVertical: 16, paddingHorizontal: 15, alignItems: "center", marginTop: 22 },
-  primaryButtonText: { color: "#11130b", fontWeight: "800", fontSize: 14 },
-  note: { color: "#797d88", fontSize: 10, lineHeight: 15, marginTop: 12, textAlign: "center" },
-  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 13 },
-  sectionTitle: { color: "#f5f5f5", fontSize: 20, fontWeight: "800" },
-  sectionHint: { color: "#747985", fontSize: 9, letterSpacing: 1.1 },
-  feature: { flexDirection: "row", alignItems: "center", backgroundColor: "#12141a", borderColor: "#252832", borderWidth: 1, borderRadius: 17, padding: 15, marginBottom: 10 },
-  featureIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: "#22261b", alignItems: "center", justifyContent: "center" },
-  featureIconText: { color: "#d7ff64", fontSize: 21, fontWeight: "700" },
-  featureCopy: { flex: 1, marginLeft: 13 },
-  featureTitle: { color: "#f5f5f5", fontSize: 14, fontWeight: "700" },
-  featureDescription: { color: "#8d909a", fontSize: 11, lineHeight: 16, marginTop: 4 },
-  chevron: { color: "#777c86", fontSize: 25, paddingLeft: 8 },
-  footer: { color: "#666a74", fontSize: 10, textAlign: "center", marginTop: 22 },
+  safe: { flex: 1, backgroundColor: "#08090e" },
+  content: { paddingHorizontal: 18, paddingTop: 10, paddingBottom: 24 },
+  header: { flexDirection: "row", alignItems: "center", marginBottom: 27 },
+  brandMark: { width: 39, height: 39, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: "#22182e" },
+  markText: { color: "#c17aff", fontSize: 28 },
+  brand: { marginLeft: 9, flex: 1 },
+  wordmark: { color: "#f8f7fb", fontSize: 22, fontWeight: "900", letterSpacing: 0.5 },
+  ai: { color: "#f29a55" },
+  tagline: { color: "#92919f", fontSize: 8, letterSpacing: 2, marginTop: 2 },
+  credits: { flexDirection: "row", alignItems: "center", borderColor: "#9a6a40", borderWidth: 1, borderRadius: 22, paddingVertical: 8, paddingHorizontal: 10, gap: 6 },
+  bolt: { color: "#ffb14e", fontSize: 19, fontWeight: "900" },
+  creditText: { color: "#f5f3f7", fontSize: 11, fontWeight: "700" },
+  plus: { color: "#d9a4ff", fontSize: 16 },
+  headline: { color: "#faf9fc", fontSize: 38, fontWeight: "900", letterSpacing: -1.3 },
+  gradientText: { color: "#cf83ef" },
+  subtitle: { color: "#b0afbb", fontSize: 14, lineHeight: 21, marginTop: 5, marginBottom: 20 },
+  hero: { minHeight: 255, backgroundColor: "#19141f", borderColor: "#56384f", borderWidth: 1, borderRadius: 22, padding: 17, marginBottom: 26, overflow: "hidden" },
+  heroGlow: { position: "absolute", right: -40, top: 20, width: 220, height: 220, borderRadius: 110, backgroundColor: "#3b2048", opacity: 0.65 },
+  heroTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  heroTag: { color: "#f2c58b", fontSize: 9, fontWeight: "800", letterSpacing: 1.4 },
+  popularBadge: { color: "#fff0e7", fontSize: 10, borderRadius: 14, overflow: "hidden", backgroundColor: "#512b3a", paddingHorizontal: 9, paddingVertical: 6 },
+  heroEmoji: { fontSize: 54, marginTop: 19, marginBottom: 8 },
+  heroTitle: { color: "#fff", fontSize: 22, fontWeight: "900" },
+  heroDescription: { color: "#c4bdca", fontSize: 12, lineHeight: 18, marginTop: 5, maxWidth: "78%" },
+  heroButton: { alignSelf: "flex-end", backgroundColor: "#a65fe5", borderRadius: 22, paddingHorizontal: 14, paddingVertical: 10, marginTop: -5 },
+  heroButtonText: { color: "#fff", fontWeight: "800", fontSize: 11 },
+  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 13 },
+  sectionTitle: { color: "#f7f5fa", fontSize: 19, fontWeight: "800" },
+  sectionHint: { color: "#777687", fontSize: 8, letterSpacing: 1 },
+  toolGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 25 },
+  toolCard: { width: "48.4%", minHeight: 175, borderRadius: 18, padding: 13, marginBottom: 11, borderWidth: 1, borderColor: "#343044", backgroundColor: "#14131d", overflow: "hidden" },
+  toolArt: { height: 78, borderRadius: 12, backgroundColor: "#211b31", justifyContent: "center", paddingLeft: 13, marginBottom: 11, flexDirection: "row", alignItems: "center" },
+  toolEmoji: { color: "#d79aff", fontSize: 36, fontWeight: "800" },
+  artSpark: { color: "#f6b26b", fontSize: 20, marginLeft: 13, marginTop: -24 },
+  toolTitle: { color: "#faf8fc", fontSize: 13, fontWeight: "800" },
+  toolSubtitle: { color: "#9f9cae", fontSize: 10, lineHeight: 15, marginTop: 5, paddingRight: 8 },
+  toolArrow: { color: "#d8b6fa", position: "absolute", right: 12, bottom: 12, fontSize: 21 },
+  seeAll: { color: "#c7a1f4", fontSize: 11, fontWeight: "700" },
+  popularRow: { paddingBottom: 8, gap: 11 },
+  popularCard: { width: 155, borderRadius: 16, borderWidth: 1, borderColor: "#302b3d", backgroundColor: "#14131b", padding: 10 },
+  popularArt: { height: 82, borderRadius: 10, backgroundColor: "#252033", alignItems: "center", justifyContent: "center", marginBottom: 9 },
+  popularEmoji: { fontSize: 39 },
+  popularTitle: { color: "#f7f5fa", fontSize: 12, fontWeight: "800" },
+  popularSubtitle: { color: "#9b98a8", fontSize: 10, marginTop: 4 },
+  notice: { borderColor: "#7651a0", borderWidth: 1, borderRadius: 14, backgroundColor: "#21172d", padding: 13, marginTop: 14 },
+  noticeText: { color: "#eee4fa", fontSize: 12, lineHeight: 18 },
+  dismiss: { color: "#d2a5f7", fontSize: 11, fontWeight: "700", marginTop: 7 },
+  footer: { color: "#666474", fontSize: 10, textAlign: "center", marginTop: 20, marginBottom: 12 },
+  tabBar: { flexDirection: "row", justifyContent: "space-around", alignItems: "center", paddingTop: 10, paddingBottom: 7, backgroundColor: "#0d0e14", borderTopColor: "#272431", borderTopWidth: 1 },
+  tab: { minWidth: 68, alignItems: "center", justifyContent: "center" },
+  tabIcon: { color: "#c7c3d0", fontSize: 24, fontWeight: "700" },
+  tabLabel: { color: "#aaa6b5", fontSize: 10, marginTop: 2 },
+  tabActive: { color: "#c27bff" },
+  activeDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "#c27bff", marginTop: 4 },
 });
