@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "YKIA AI",
+    "slug": "ykia-ai",
+    "scheme": "ykiai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "plugins": [
+      "expo-router"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ykia.ai"
+    }
+  }
+}
