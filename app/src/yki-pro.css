@@ -3,16 +3,16 @@
 .yki-pro-page *{box-sizing:border-box}
 .yki-pro-page a{color:inherit;text-decoration:none}
 .yki-pro-nav{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px clamp(18px,4vw,56px);border-bottom:1px solid #ffffff12;background:#080809e8;backdrop-filter:blur(18px)}
-.yki-pro-brand{font-size:22px;letter-spacing:-1px;font-weight:850}.yki-pro-brand span{color:#f38ac4}
+.yki-pro-brand{font-size:22px;letter-spacing:-1px;font-weight:850}.yki-pro-brand span{color:#ffd400}
 .yki-pro-links{display:flex;gap:22px;align-items:center;color:#aaa7b0;font-size:13px}
 .yki-pro-links a:hover,.yki-pro-links a[aria-current=page]{color:#fff}
 .yki-pro-actions{display:flex;align-items:center;gap:10px}
 .yki-pro-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid #ffffff22;border-radius:999px;padding:11px 16px;font-size:13px;font-weight:650;background:#ffffff08;color:#fff;cursor:pointer}
-.yki-pro-btn.primary{background:#f0a0d1;color:#1a0d17;border-color:#f0a0d1}
-.yki-pro-hero{position:relative;overflow:hidden;padding:clamp(52px,9vw,112px) clamp(20px,7vw,100px) 58px;background:radial-gradient(ellipse at 78% 15%,#8b32652e,transparent 36%),radial-gradient(ellipse at 12% 65%,#5739a11c,transparent 32%)}
-.yki-pro-kicker{display:inline-flex;align-items:center;gap:8px;color:#f0a0d1;text-transform:uppercase;font-size:11px;font-weight:800;letter-spacing:2px}
+.yki-pro-btn.primary{background:#ffd400;color:#1a0d17;border-color:#ffd400}
+.yki-pro-hero{position:relative;overflow:hidden;padding:clamp(52px,9vw,112px) clamp(20px,7vw,100px) 58px;background:radial-gradient(ellipse at 78% 15%,#6b52002e,transparent 36%),radial-gradient(ellipse at 12% 65%,#6b52001c,transparent 32%)}
+.yki-pro-kicker{display:inline-flex;align-items:center;gap:8px;color:#ffd400;text-transform:uppercase;font-size:11px;font-weight:800;letter-spacing:2px}
 .yki-pro-hero h1{font-size:clamp(42px,7.5vw,90px);line-height:.99;letter-spacing:-.065em;max-width:900px;margin:22px 0}
-.yki-pro-hero h1 em{font-style:normal;color:#f0a0d1}
+.yki-pro-hero h1 em{font-style:normal;color:#ffd400}
 .yki-pro-hero p{max-width:650px;color:#aaa6b0;font-size:clamp(15px,1.6vw,18px);line-height:1.7}
 .yki-pro-hero-ctas{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
 .yki-pro-statline{display:flex;flex-wrap:wrap;gap:10px;margin-top:32px}
@@ -23,23 +23,23 @@
 .yki-pro-muted{color:#96919c;font-size:13px;line-height:1.6}
 .yki-pro-trendgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 .yki-pro-trendcard{min-height:260px;display:flex;flex-direction:column;justify-content:space-between;padding:22px;border:1px solid #ffffff17;border-radius:22px;background:linear-gradient(145deg,#19151c,#0d0c0f 70%);transition:transform .18s,border-color .18s}
-.yki-pro-trendcard:hover{transform:translateY(-3px);border-color:#f0a0d177}
+.yki-pro-trendcard:hover{transform:translateY(-3px);border-color:#ffd40077}
 .yki-pro-trendtop{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.yki-pro-tag{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#f0a0d1;border:1px solid #f0a0d14a;border-radius:999px;padding:6px 9px}
+.yki-pro-tag{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#ffd400;border:1px solid #ffd4004a;border-radius:999px;padding:6px 9px}
 .yki-pro-trendnum{color:#6e6874;font-size:12px}
 .yki-pro-trendcard h3{font-size:23px;letter-spacing:-.035em;margin:25px 0 8px}
 .yki-pro-trendcard p{color:#aaa5b0;font-size:13px;line-height:1.65;margin:0 0 18px}
 .yki-pro-trendfoot{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .yki-pro-trendfoot small{color:#827c87;font-size:11px}
-.yki-pro-arrow{color:#f0a0d1;font-size:13px;font-weight:700}
-.yki-pro-notice{display:flex;align-items:flex-start;gap:12px;padding:15px 17px;border:1px solid #d9a4c333;border-radius:16px;background:#f0a0d10a;color:#c5bdc9;font-size:12px;line-height:1.6;margin:22px 0 0}
+.yki-pro-arrow{color:#ffd400;font-size:13px;font-weight:700}
+.yki-pro-notice{display:flex;align-items:flex-start;gap:12px;padding:15px 17px;border:1px solid #d9b40033;border-radius:16px;background:#ffd4000a;color:#c5bdc9;font-size:12px;line-height:1.6;margin:22px 0 0}
 .yki-pro-featuregrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .yki-pro-feature{padding:22px;border:1px solid #ffffff15;border-radius:18px;background:#ffffff05}
 .yki-pro-feature strong{display:block;margin:10px 0 6px}.yki-pro-feature p{font-size:13px;line-height:1.6;color:#a7a1ac;margin:0}
 .yki-pro-footer{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;padding:28px clamp(18px,5vw,64px) 100px;border-top:1px solid #ffffff12;color:#9e98a4;font-size:12px}
 .yki-pro-footerlinks{display:flex;flex-wrap:wrap;gap:14px}
 .yki-pro-mobilebar{display:none}
-@media(max-width:760px){.yki-pro-nav{padding:13px 16px}.yki-pro-links{display:none}.yki-pro-brand{font-size:20px}.yki-pro-actions .yki-pro-ghost{display:none}.yki-pro-btn{padding:10px 13px;font-size:12px}.yki-pro-hero{padding:56px 20px 34px}.yki-pro-section{padding:12px 16px 34px}.yki-pro-sectionhead{align-items:start;flex-direction:column}.yki-pro-trendgrid{grid-template-columns:1fr}.yki-pro-trendcard{min-height:205px;padding:19px}.yki-pro-trendcard h3{font-size:21px;margin-top:20px}.yki-pro-featuregrid{grid-template-columns:1fr}.yki-pro-footer{padding-bottom:100px}.yki-pro-mobilebar{position:fixed;z-index:40;bottom:10px;left:10px;right:10px;display:grid;grid-template-columns:repeat(5,1fr);gap:3px;padding:9px 5px calc(9px + env(safe-area-inset-bottom));border:1px solid #ffffff20;border-radius:22px;background:#17151beF;backdrop-filter:blur(24px);box-shadow:0 10px 40px #0009}.yki-pro-mobilebar a{display:flex;flex-direction:column;align-items:center;gap:5px;color:#aaa3b0;font-size:10px}.yki-pro-mobilebar a.active{color:#f0a0d1}.yki-pro-mobilebar span{font-size:18px;line-height:20px}}
+@media(max-width:760px){.yki-pro-nav{padding:13px 16px}.yki-pro-links{display:none}.yki-pro-brand{font-size:20px}.yki-pro-actions .yki-pro-ghost{display:none}.yki-pro-btn{padding:10px 13px;font-size:12px}.yki-pro-hero{padding:56px 20px 34px}.yki-pro-section{padding:12px 16px 34px}.yki-pro-sectionhead{align-items:start;flex-direction:column}.yki-pro-trendgrid{grid-template-columns:1fr}.yki-pro-trendcard{min-height:205px;padding:19px}.yki-pro-trendcard h3{font-size:21px;margin-top:20px}.yki-pro-featuregrid{grid-template-columns:1fr}.yki-pro-footer{padding-bottom:100px}.yki-pro-mobilebar{position:fixed;z-index:40;bottom:10px;left:10px;right:10px;display:grid;grid-template-columns:repeat(5,1fr);gap:3px;padding:9px 5px calc(9px + env(safe-area-inset-bottom));border:1px solid #ffffff20;border-radius:22px;background:#17160bef;backdrop-filter:blur(24px);box-shadow:0 10px 40px #0009}.yki-pro-mobilebar a{display:flex;flex-direction:column;align-items:center;gap:5px;color:#aaa3b0;font-size:10px}.yki-pro-mobilebar a.active{color:#ffd400}.yki-pro-mobilebar span{font-size:18px;line-height:20px}}
 
 .yki-pro-search{display:flex;align-items:center;gap:10px;border:1px solid var(--hf-color-border-default);border-radius:14px;padding:13px 15px;margin-bottom:18px;background:var(--hf-color-background-secondary)}
 .yki-pro-search-input{background:transparent;border:0;outline:0;color:var(--hf-color-text-primary);width:100%;font-size:14px}
