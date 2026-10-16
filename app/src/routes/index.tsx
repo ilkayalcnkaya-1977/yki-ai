@@ -1,44 +1,46 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowUpRight, Play, Sparkles, Wand2, Flame, Layers3 } from "lucide-react";
-import { ScrollScrub } from "@/components/scroll-scrub/scroll-scrub";
-import { scrollScrubScenes, scrollScrubTheme } from "@/scroll-scrub-scenes";
+import { ArrowUpRight, Sparkles, Flame, Layers3, WandSparkles, Video, Image as ImageIcon, Compass, FolderOpen, Coins, UserRound } from "lucide-react";
+import "@/yki-pro.css";
 
 export const Route = createFileRoute("/")({ component: Index });
 
+const trendCards = [
+  { n: "01", tag: "Fotoğraf", title: "Sinematik portre", desc: "Tek fotoğrafı güçlü ışık, atmosfer ve film karesi hissiyle yeniden yorumla.", prompt: "cinematic portrait" },
+  { n: "02", tag: "Video", title: "Bir dünyayı dönüştür", desc: "Şehrini, odanı veya bir fikri başka bir evrene dönüştüren kısa video konsepti.", prompt: "world transformation" },
+  { n: "03", tag: "Reels", title: "Moda ve stil geçişi", desc: "Kombin, ürün veya karakter dönüşümü için dikey içerik fikri.", prompt: "fashion transition" },
+];
+
 function Index() {
   return (
-    <main className="ykiai-page">
-      <nav className="ykiai-nav">
-        <a className="ykiai-logo" href="#top">YKI AI<span>®</span></a>
-        <div className="ykiai-nav-links"><a href="/studio">Studio</a><a href="/trends">Trends</a><a href="/projects">Projects</a><a href="/credits">Credits</a></div>
-        <div className="ykiai-nav-actions"><a className="ykiai-ghost" href="/login">Log in</a><a className="ykiai-pill" href="/studio">Start creating <ArrowUpRight size={15}/></a></div>
+    <main className="yki-pro-page">
+      <nav className="yki-pro-nav">
+        <a className="yki-pro-brand" href="#top">YKI AI<span>®</span></a>
+        <div className="yki-pro-links"><a href="#trends">Trendler</a><a href="/studio">Stüdyo</a><a href="/projects">Projeler</a><a href="/credits">Krediler</a></div>
+        <div className="yki-pro-actions"><a className="yki-pro-btn yki-pro-ghost" href="/login">Giriş yap</a><a className="yki-pro-btn primary" href="/studio">Üretmeye başla <ArrowUpRight size={15}/></a></div>
       </nav>
-      <section id="top" className="ykiai-hero">
-        <div className="ykiai-hero-copy">
-          <p className="ykiai-eyebrow"><Sparkles size={14}/> THE NEW CREATIVE INTERNET</p>
-          <h1>Make the <em>impossible</em> watchable.</h1>
-          <p className="ykiai-lede">Turn a thought, a trend or a single sentence into cinematic short-form content made to stop the scroll.</p>
-          <div className="ykiai-hero-actions"><a className="ykiai-primary" href="/studio"><Play size={17} fill="currentColor"/> Create your first video</a><a href="#studio" className="ykiai-text-link">See the studio <ArrowUpRight size={16}/></a></div>
+      <section id="top" className="yki-pro-hero">
+        <span className="yki-pro-kicker"><Sparkles size={14}/> Yaratıcılığın yeni alanı</span>
+        <h1>Trendleri yakala.<br/><em>Kendi tarzını üret.</em></h1>
+        <p>Fotoğraf fikirlerini, kısa video konseptlerini ve yaratıcı şablonları tek bir yerde keşfet. Fikrini seç, üretim stüdyosuna geç ve kendi içeriğini oluştur.</p>
+        <div className="yki-pro-hero-ctas"><a className="yki-pro-btn primary" href="/studio"><Video size={16}/> Stüdyoda oluştur <ArrowUpRight size={15}/></a><a className="yki-pro-btn" href="/trends"><Flame size={15}/> Trend Radar'ı keşfet</a></div>
+        <div className="yki-pro-statline"><span>✦ Fotoğraf fikirleri</span><span>▶ Kısa video konseptleri</span><span>↗ Dikey içerik odaklı</span></div>
+      </section>
+      <section id="trends" className="yki-pro-section">
+        <div className="yki-pro-sectionhead"><div><span className="yki-pro-kicker"><Flame size={14}/> Trend Radar</span><h2>Üretime hazır yaratıcı fikirler</h2><p className="yki-pro-muted">Keşfet, ilham al ve desteklenen üretim araçlarıyla kendi yorumunu oluştur.</p></div><a className="yki-pro-btn" href="/trends">Tüm fikirler <ArrowUpRight size={15}/></a></div>
+        <div className="yki-pro-trendgrid">{trendCards.map((t) => <article className="yki-pro-trendcard" key={t.n}><div className="yki-pro-trendtop"><span className="yki-pro-tag">{t.tag}</span><span className="yki-pro-trendnum">FİKİR {t.n}</span></div><div><h3>{t.title}</h3><p>{t.desc}</p></div><div className="yki-pro-trendfoot"><small>Yaratıcı şablon</small><a className="yki-pro-arrow" href={`/studio?trend=${encodeURIComponent(t.prompt)}`}>Bu fikri kullan ↗</a></div></article>)}</div>
+        <div className="yki-pro-notice"><Flame size={16}/><div><strong>Trend verisi hakkında</strong><br/>Bu kartlar başlangıç için seçilmiş yaratıcı fikirlerdir; canlı platform ölçümü veya gerçek zamanlı popülerlik sıralaması değildir. Güncel trend bağlantıları etkinleştirildiğinde kaynak ve son güncelleme bilgisi ayrıca gösterilecektir.</div></div>
+      </section>
+      <section className="yki-pro-section">
+        <div className="yki-pro-sectionhead"><div><span className="yki-pro-kicker"><Layers3 size={14}/> Tek platform</span><h2>Fikirden içeriğe, tek akışta</h2></div></div>
+        <div className="yki-pro-featuregrid">
+          <article className="yki-pro-feature"><ImageIcon size={21}/><strong>Fotoğraf fikirleri</strong><p>Görsel konseptlerini seç, açıklamanı hazırla ve desteklenen araçlarda dene.</p></article>
+          <article className="yki-pro-feature"><Video size={21}/><strong>Kısa video stüdyosu</strong><p>Komutunu ve formatını belirle. Gerçek üretim desteği olan modellerle devam et.</p></article>
+          <article className="yki-pro-feature"><WandSparkles size={21}/><strong>Trendden taslağa</strong><p>Bir fikri kendi markana ve anlatımına göre yeniden düzenle.</p></article>
         </div>
-        <div className="ykiai-hero-orbit">
-          <div className="ykiai-orbit-card"><span>01</span><strong>IDEA</strong><small>What if Tokyo froze in time?</small></div>
-          <div className="ykiai-orbit-card second"><span>02</span><strong>WORLD</strong><small>Story · shots · motion · sound</small></div>
-          <div className="ykiai-orbit-card third"><span>03</span><strong>DROP</strong><small>9:16 · ready to publish</small></div>
-        </div>
       </section>
-      <section className="ykiai-film"><ScrollScrub scenes={scrollScrubScenes} theme={scrollScrubTheme}/><div className="ykiai-film-overlay"><span>SCROLL TO DIRECT</span><span>01 — 01</span></div></section>
-      <section id="studio" className="ykiai-section">
-        <div className="ykiai-section-head"><p className="ykiai-eyebrow">01 / STUDIO</p><h2>Your idea is the <span>director.</span></h2><p>Write naturally. YKI AI turns your idea into a hook, script, shot list and production prompt.</p></div>
-        <div className="ykiai-studio-card"><div className="studio-top"><span>NEW PROJECT</span><span>9:16 · 1080P · AUDIO ON</span></div><div className="studio-prompt">A street racer drives through a neon Istanbul at midnight while the city suddenly transforms into a futuristic metropolis<span className="cursor"/></div><div className="studio-bottom"><div className="studio-chips"><span><Wand2 size={14}/> Cinematic</span><span>8 sec</span><span>Fast</span></div><button className="ykiai-primary small">Generate <ArrowUpRight size={15}/></button></div></div>
-      </section>
-      <section id="trends" className="ykiai-section">
-        <div className="ykiai-section-head row"><div><p className="ykiai-eyebrow"><Flame size={14}/> 02 / TREND RADAR</p><h2>Catch the wave <span>before it peaks.</span></h2></div><a className="ykiai-text-link" href="/trends">Open radar <ArrowUpRight size={16}/></a></div>
-        <div className="trend-grid"><article><span>#01 · RISING</span><h3>Impossible POV</h3><p>POV stories with a twist in the first 2 seconds.</p><b>+184%</b></article><article><span>#02 · HOT</span><h3>What If Worlds</h3><p>Reality-bending transformations are accelerating.</p><b>+126%</b></article><article><span>#03 · MOVING</span><h3>Micro Cinema</h3><p>Short narrative scenes with film-grade motion.</p><b>+91%</b></article></div>
-      </section>
-      <section id="works" className="ykiai-section"><div className="ykiai-section-head"><p className="ykiai-eyebrow"><Layers3 size={14}/> 03 / THE PLATFORM</p><h2>One place for your <span>creative universe.</span></h2></div><div className="feature-grid"><div><strong>Generate</strong><p>Turn prompts into production-ready short videos.</p></div><div><strong>Remix</strong><p>Iterate on the strongest idea without starting over.</p></div><div><strong>Publish</strong><p>Titles, captions and formats built around each platform.</p></div></div></section>
-      <section className="ykiai-final"><p className="ykiai-eyebrow">THE FUTURE IS SHORT-FORM</p><h2>Do not just follow the feed.<br/><span>Shape it.</span></h2><button className="ykiai-primary">Enter the studio <ArrowUpRight size={17}/></button></section>
-      <footer className="ykiai-footer"><div><span>YKI AI® — CREATIVE AI STUDIO</span><p>Creative tools for ideas, stories and short-form content.</p></div><nav aria-label="Legal and support links"><a href="/about">About</a><a href="/contact">Contact</a><a href="/privacy">Privacy & KVKK</a><a href="/terms">Terms of use</a><a href="/pre-information">Pre-contract information</a><a href="/distance-sales">Distance sales</a><a href="/refund-policy">Cancellation & refunds</a><a href="/credits">Credit packages</a></nav><small>Features and credit purchases are subject to availability and the terms displayed before checkout.</small></footer>
+      <section className="yki-pro-section"><div className="yki-pro-sectionhead"><div><span className="yki-pro-kicker">Başlamak kolay</span><h2>Fikrini hayata geçir.</h2><p className="yki-pro-muted">Üretim ve kredi kullanımı, seçilen modelin gerçekten desteklenmesine bağlıdır.</p></div><a className="yki-pro-btn primary" href="/studio">Stüdyoyu aç <ArrowUpRight size={15}/></a></div></section>
+      <footer className="yki-pro-footer"><div><a className="yki-pro-brand" href="/">YKI AI<span>®</span></a><p>Yapay zekâ destekli yaratıcı stüdyo.</p></div><div className="yki-pro-footerlinks"><a href="/about">Hakkımızda</a><a href="/contact">İletişim</a><a href="/privacy">Gizlilik ve KVKK</a><a href="/terms">Kullanım koşulları</a><a href="/pre-information">Ön bilgilendirme</a><a href="/distance-sales">Mesafeli satış</a><a href="/refund-policy">İade koşulları</a><a href="/credits">Kredi paketleri</a></div></footer>
+      <nav className="yki-pro-mobilebar" aria-label="Mobil menü"><a href="/" className="active"><Compass/><span>Keşfet</span></a><a href="/studio"><Sparkles/><span>Oluştur</span></a><a href="/projects"><FolderOpen/><span>Projeler</span></a><a href="/credits"><Coins/><span>Krediler</span></a><a href="/login"><UserRound/><span>Profil</span></a></nav>
     </main>
   );
 }
-
