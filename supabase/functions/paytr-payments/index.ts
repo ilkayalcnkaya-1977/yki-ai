@@ -92,6 +92,8 @@ Deno.serve(async (req) => {
   if (!userResponse.ok) return json({ error: "Invalid session" }, 401);
   const user = await userResponse.json();
   if (!user?.id || !user?.email) return json({ error: "Verified account email required" }, 400);
+  const userPhone = String(user.user_metadata?.phone ?? user.phone ?? "").trim();
+  if (!userPhone) return json({ error: "PayTR ödeme adımı için hesabındaki telefon numarasını tamamla." }, 400);
 
   const workspacesResponse = await supabase("/rest/v1/workspaces?select=id&owner_user_id=eq." + encodeURIComponent(user.id) + "&limit=1");
   if (!workspacesResponse.ok) return json({ error: "Workspace lookup failed" }, 500);
@@ -139,7 +141,7 @@ Deno.serve(async (req) => {
     max_installment: maxInstallment,
     user_name: String(user.user_metadata?.full_name ?? user.email),
     user_address: "YKI AI digital credits",
-    user_phone: "0000000000",
+    user_phone: userPhone,
     merchant_ok_url: "https://ykiai.com.tr/credits?payment=return",
     merchant_fail_url: "https://ykiai.com.tr/credits?payment=failed",
     timeout_limit: "30",
