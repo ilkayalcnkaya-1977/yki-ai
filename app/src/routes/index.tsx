@@ -10,7 +10,7 @@ function Index() {
     <main className="ykiai-page">
       <nav className="ykiai-nav">
         <a className="ykiai-logo" href="#top">YKI AI<span>®</span></a>
-        <div className="ykiai-nav-links"><a href="/studio">Studio</a><a href="/trends">Trends</a><a href="/projects">Projects</a></div>
+        <div className="ykiai-nav-links"><a href="/studio">Studio</a><a href="/trends">Trends</a><a href="/projects">Projects</a><a href="/credits">Credits</a></div>
         <div className="ykiai-nav-actions"><a className="ykiai-ghost" href="/login">Log in</a><a className="ykiai-pill" href="/studio">Start creating <ArrowUpRight size={15}/></a></div>
       </nav>
       <section id="top" className="ykiai-hero">
@@ -37,7 +37,7 @@ function Index() {
       </section>
       <section id="works" className="ykiai-section"><div className="ykiai-section-head"><p className="ykiai-eyebrow"><Layers3 size={14}/> 03 / THE PLATFORM</p><h2>One place for your <span>creative universe.</span></h2></div><div className="feature-grid"><div><strong>Generate</strong><p>Turn prompts into production-ready short videos.</p></div><div><strong>Remix</strong><p>Iterate on the strongest idea without starting over.</p></div><div><strong>Publish</strong><p>Titles, captions and formats built around each platform.</p></div></div></section>
       <section className="ykiai-final"><p className="ykiai-eyebrow">THE FUTURE IS SHORT-FORM</p><h2>Do not just follow the feed.<br/><span>Shape it.</span></h2><button className="ykiai-primary">Enter the studio <ArrowUpRight size={17}/></button></section>
-      <footer><span>YKI AI® — PROJECT 01</span><span>Built for the next generation of creators.</span></footer>
+      <footer className="ykiai-footer"><div><span>YKI AI® — CREATIVE AI STUDIO</span><p>Creative tools for ideas, stories and short-form content.</p></div><nav aria-label="Legal and support links"><a href="/about">About</a><a href="/contact">Contact</a><a href="/privacy">Privacy & KVKK</a><a href="/terms">Terms of use</a><a href="/pre-information">Pre-contract information</a><a href="/distance-sales">Distance sales</a><a href="/refund-policy">Cancellation & refunds</a><a href="/credits">Credit packages</a></nav><small>Features and credit purchases are subject to availability and the terms displayed before checkout.</small></footer>
     </main>
   );
 }
