@@ -13,7 +13,7 @@ function Contact() {
       <section className="mt-8 rounded-2xl border border-q-border-default p-6">
         <div className="flex items-start gap-4"><Mail size={22}/><div><h2 className="font-semibold">Support contact</h2><p className="mt-2 text-sm leading-6 text-q-text-secondary">For support requests, write to the email below. Include your account email and a short description of the issue. Never send your password or full card details.</p><p className="mt-3 text-sm font-medium">Site owner: İlkay Yalçınkaya</p><p className="mt-1 text-sm text-q-text-secondary">Support email: illkayyalcnkaya@icloud.com</p><p className="mt-1 text-sm text-q-text-secondary">Business address: Vatan Mahallesi, Hanımeli Sokak, Gülüm İş Hanı No: 11 A, Bayrampaşa, İstanbul</p></div></div>
       </section>
-      <p className="mt-6 text-sm leading-6 text-q-text-secondary">These fields are intentionally marked for completion rather than displaying invented business details. Replace them with verified information before submitting the website for payment-provider review.</p>
+      <p className="mt-6 text-sm leading-6 text-q-text-secondary">The contact details above are based on the information provided by the site owner. The seller should confirm that the legal identity and contact details match the official tax and business records before checkout is enabled.</p>
       <a className="ykiai-text-link mt-8" href="/"><ArrowLeft size={16}/> Back home</a>
     </div>
   </main>;
