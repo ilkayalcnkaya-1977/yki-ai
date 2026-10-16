@@ -39,6 +39,12 @@ function Studio() {
   const credits = duration === "5s" ? 20 : 32;
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const trendPrompt = params.get("prompt");
+    if (trendPrompt) setPrompt(trendPrompt.slice(0, 4000));
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
     const loadBalance = async () => {

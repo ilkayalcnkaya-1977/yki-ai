@@ -35,8 +35,8 @@ function Credits(){
       <p className="ykiai-eyebrow"><Zap size={13}/> SIMPLE CREATOR PRICING</p>
       <h1>More ideas.<br/><span>More videos.</span></h1>
       <p className="credits-lede">Buy credits when you need them. Your balance stays ready for the next idea.</p>
-      <div className="plan-grid">{plans.map(({name,credits,price,desc,features})=><article className={name==='Creator'?'plan featured':'plan'} key={name}>{name==='Creator'&&<b className="popular">MOST POPULAR</b>}<h2>{name}</h2><p>{desc}</p><div className="plan-price"><strong>{price}</strong><small>/ package</small></div><div className="plan-credits"><Zap size={14}/>{credits} credits</div><ul>{features.map(f=><li key={f}><Check size={14}/>{f}</li>)}</ul><button>Get {name} <ArrowUpRight size={14}/></button></article>)}</div>
-      <div className="credits-note"><span className="health-dot" data-ok={health.data?.ok ? "true" : "false"}/><span>{health.data?.ok ? "Platform database ready" : "Platform services initializing"}</span><Sparkles size={15}/> Final pricing will be calibrated against real generation costs before launch.</div>
+      <div className="plan-grid">{plans.map(({name,credits,price,desc,features})=><article className={name==='Creator'?'plan featured':'plan'} key={name}>{name==='Creator'&&<b className="popular">MOST POPULAR</b>}<h2>{name}</h2><p>{desc}</p><div className="plan-price"><strong>{price}</strong><small>/ package</small></div><div className="plan-credits"><Zap size={14}/>{credits} credits</div><ul>{features.map(f=><li key={f}><Check size={14}/>{f}</li>)}</ul><button type="button" disabled title="Secure payment checkout is not connected yet">Payments coming soon <ArrowUpRight size={14}/></button></article>)}</div>
+      <div className="credits-note"><span className="health-dot" data-ok={health.data?.ok ? "true" : "false"}/><span>{health.data?.ok ? "Platform database ready" : "Platform services initializing"}</span><Sparkles size={15}/> Checkout is not connected yet. No payment will be taken from these cards; prices are draft examples until secure payment verification is enabled.</div>
     </section>
   </main>
 }
